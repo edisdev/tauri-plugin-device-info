@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-device-info"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["edisdev <edisdev14@gmail.com>"]
 description = "A Tauri plugin to access device information."
 license = "MIT"
