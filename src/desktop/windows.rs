@@ -29,7 +29,7 @@ struct Win32BIOS {
 pub fn get_device_info() -> crate::Result<DeviceInfoResponse> {
     let result = (|| -> Option<DeviceInfoResponse> {
         let com_lib = COMLibrary::new().ok()?;
-        let wmi_connection = WMIConnection::new(com_lib.into()).ok()?;
+        let wmi_connection = WMIConnection::new(com_lib).ok()?;
 
         let computer_systems: Vec<Win32ComputerSystem> = wmi_connection
             .raw_query("SELECT Manufacturer, Model, Name FROM Win32_ComputerSystem")
@@ -41,9 +41,9 @@ pub fn get_device_info() -> crate::Result<DeviceInfoResponse> {
             .raw_query("SELECT SerialNumber FROM Win32_BIOS")
             .ok()?;
 
-        let system_info = computer_systems.get(0);
-        let product_info = system_products.get(0);
-        let bios_info = bios_data.get(0);
+        let system_info = computer_systems.first();
+        let product_info = system_products.first();
+        let bios_info = bios_data.first();
 
         Some(DeviceInfoResponse {
             device_name: system_info.and_then(|s| s.name.clone()),
@@ -58,7 +58,7 @@ pub fn get_device_info() -> crate::Result<DeviceInfoResponse> {
         })
     })();
 
-    Ok(result.unwrap_or_else(|| DeviceInfoResponse {
+    Ok(result.unwrap_or(DeviceInfoResponse {
         device_name: None,
         manufacturer: None,
         model: None,
@@ -76,7 +76,7 @@ struct Win32VideoController {
 
 pub fn get_display_refresh_rate() -> Option<f64> {
     let com_lib = COMLibrary::new().ok()?;
-    let wmi_connection = WMIConnection::new(com_lib.into()).ok()?;
+    let wmi_connection = WMIConnection::new(com_lib).ok()?;
 
     let results: Vec<Win32VideoController> = wmi_connection
         .raw_query("SELECT CurrentRefreshRate FROM Win32_VideoController")
