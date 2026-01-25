@@ -2,7 +2,7 @@ name: publish
 on:
   push:
     tags:
-      - 'v*' # v0.1.0 gibi bir tag pushlandığında çalışır
+      - 'v*'
 
 jobs:
   publish-npm:

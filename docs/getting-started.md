@@ -15,7 +15,7 @@ yarn tauri add device-info
 ```toml
 # src-tauri/Cargo.toml
 [dependencies]
-tauri-plugin-device-info = "0.1.0"
+tauri-plugin-device-info = "1.0.0"
 ```
 
 **2. Add the JavaScript package:**
