@@ -79,7 +79,7 @@ impl<R: Runtime> DeviceInfo<R> {
                 .map_err(|e| crate::Error::DeviceInfo(e.to_string()))?
                 .next()
             {
-                let level = (battery.state_of_charge().value * 100.0).round() as f32;
+                let level = (battery.state_of_charge().value * 100.0).round();
                 let is_charging = battery.state() == battery::State::Charging;
                 let health = format!("{:?}", battery.state_of_health().value * 100.0);
 
