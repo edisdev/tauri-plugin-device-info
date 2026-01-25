@@ -1,0 +1,25 @@
+{
+  "name": "tauri-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "tauri-plugin-device-info-api": "file:../../"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.0.0",
+    "@tauri-apps/cli": "^2.0.0",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.3.5",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.0.0"
+  }
+}

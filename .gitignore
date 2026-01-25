@@ -1,0 +1,107 @@
+# ============================================================================
+# IDE & Editor
+# ============================================================================
+/.vs
+.idea/
+*.sublime*
+.vscode/settings.json
+*.swp
+*.swo
+
+# ============================================================================
+# OS Generated
+# ============================================================================
+.DS_Store
+.Thumbs.db
+Desktop.ini
+
+# ============================================================================
+# Logs
+# ============================================================================
+debug.log
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================================================
+# Dependencies
+# ============================================================================
+node_modules/
+package-lock.json
+
+# ============================================================================
+# Build Outputs
+# ============================================================================
+/target
+dist-js/
+dist/
+
+# ============================================================================
+# Rust
+# ============================================================================
+Cargo.lock
+/.tauri
+
+# ============================================================================
+# Android
+# ============================================================================
+*.apk
+*.aab
+*.dex
+*.class
+*.jar
+*.aar
+.gradle/
+local.properties
+key.properties
+*.keystore
+*.jks
+
+# Android build outputs
+**/android/**/build/
+**/android/**/.gradle/
+**/android/**/.cxx/
+**/android/**/captures/
+**/android/**/.externalNativeBuild/
+
+# ============================================================================
+# iOS / Apple
+# ============================================================================
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+**/apple/**/build/
+**/apple/**/*.xcworkspace/xcuserdata/
+DerivedData/
+*.hmap
+*.ipa
+*.xcuserstate
+
+# ============================================================================
+# Tauri Generated (platform-specific, rebuilt on each machine)
+# ============================================================================
+# Uncomment below if you don't want to commit generated mobile configs
+# examples/tauri-app/src-tauri/gen/android/
+# examples/tauri-app/src-tauri/gen/apple/
+
+# Always ignore build artifacts within gen
+**/gen/android/.gradle/
+**/gen/android/build/
+**/gen/android/app/build/
+**/gen/android/**/build/
+**/gen/apple/build/
+**/gen/apple/*/build/
+
+# ============================================================================
+# Misc
+# ============================================================================
+*.tmp
+*.temp
+.env
+.env.local
+.env.*.local
