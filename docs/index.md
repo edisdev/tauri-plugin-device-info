@@ -34,6 +34,16 @@ features:
     details: Works on Windows, macOS, Linux, iOS, and Android
 ---
 
+## Preview
+
+<div align="center">
+  <img src="/DeviceInfo_Mac.png" alt="macOS Preview" width="600" style="border-radius: 8px; margin-bottom: 20px;">
+  <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+    <img src="/DeviceInfo_Android.png" alt="Android Preview" width="300" style="border-radius: 8px;">
+    <img src="/DeviceInfo_iOS.png" alt="iOS Preview" width="300" style="border-radius: 8px;">
+  </div>
+</div>
+
 ## Platform Support
 
 | Platform | Status |

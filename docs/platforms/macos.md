@@ -1,5 +1,7 @@
 # macOS
 
+![macOS Device Info Preview](/DeviceInfo_Mac.png)
+
 ## Implementation
 
 macOS support uses native Apple tools and frameworks.

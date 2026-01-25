@@ -1,5 +1,10 @@
 # Android
 
+<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+  <img src="/DeviceInfo_Android.png" width="300" style="border-radius: 8px;">
+  <img src="/DeviceInfo_Android_Gif.gif" width="300" style="border-radius: 8px;">
+</div>
+
 ## Implementation
 
 Android support uses native Kotlin with Android SDK APIs.

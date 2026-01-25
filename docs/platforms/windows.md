@@ -1,5 +1,7 @@
 # Windows
 
+![Windows Device Info Preview](/DeviceInfo_Windows.png)
+
 ## Implementation
 
 Windows support uses **WMI (Windows Management Instrumentation)** to query system information.

@@ -1,5 +1,7 @@
 # iOS
 
+![iOS Device Info Preview](/DeviceInfo_iOS.png){width=300}
+
 ## Implementation
 
 iOS support uses native Swift with UIKit and Network frameworks.

@@ -19,7 +19,7 @@
   "bugs": {
     "url": "https://github.com/edisdev/tauri-plugin-device-info/issues"
   },
-  "homepage": "https://github.com/edisdev/tauri-plugin-device-info#readme",
+  "homepage": "https://edisdev.github.io/tauri-plugin-device-info",
   "type": "module",
   "types": "./dist-js/index.d.ts",
   "main": "./dist-js/index.cjs",

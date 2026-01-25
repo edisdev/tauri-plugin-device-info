@@ -6,6 +6,23 @@
 
 A comprehensive Tauri plugin to access device information including Battery, Network, Storage, Display, and System Details.
 
+---
+
+**📖 [Read the Documentation](https://edisdev.github.io/tauri-plugin-device-info)**
+
+## 📸 Preview
+
+<div>
+  <img src="./docs/public/DeviceInfo_Android_Gif.gif" alt="Android Preview GIF" width="250">
+  <br>
+  <img src="./docs/public/DeviceInfo_Mac.png" alt="macOS Preview" width="400">
+  <img src="./docs/public/DeviceInfo_Windows.png" alt="Windows Preview" width="400">
+  <br>
+  <img src="./docs/public/DeviceInfo_Android.png" alt="Android Preview" width="250">
+  <img src="./docs/public/DeviceInfo_iOS.png" alt="iOS Preview" width="250">
+  <p><i>Example Dashboard Application across platforms</i></p>
+</div>
+
 ## Platform Support
 
 | Platform | Support |
