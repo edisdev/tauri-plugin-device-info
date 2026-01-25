@@ -48,7 +48,7 @@ yarn tauri add device-info
 **Cargo.toml:**
 ```toml
 [dependencies]
-tauri-plugin-device-info = "0.1.0"
+tauri-plugin-device-info = "1.0.0"
 # or from git
 tauri-plugin-device-info = { git = "https://github.com/edisdev/tauri-plugin-device-info" }
 ```
