@@ -1,0 +1,44 @@
+---
+name: Feature Request
+about: Suggest an idea for this project
+title: "[Feature]: "
+labels: enhancement
+assignees: ""
+---
+
+## Problem Statement
+
+A clear and concise description of what the problem is.
+Ex. I'm always frustrated when [...]
+
+## Proposed Solution
+
+A clear and concise description of what you want to happen.
+
+## Alternatives Considered
+
+A clear and concise description of any alternative solutions or features you've considered.
+
+## Use Case
+
+Describe the use case for this feature. How would it benefit you or others?
+
+## Platform Specifics
+
+Does this feature apply to specific platforms?
+
+- [ ] Windows
+- [ ] macOS
+- [ ] Linux
+- [ ] iOS
+- [ ] Android
+- [ ] All platforms
+
+## Additional Context
+
+Add any other context, mockups, or screenshots about the feature request here.
+
+## Would you be willing to contribute?
+
+- [ ] Yes, I'd like to help implement this feature
+- [ ] No, I'm just suggesting the idea
