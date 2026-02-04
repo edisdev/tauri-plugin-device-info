@@ -15,7 +15,7 @@ yarn tauri add device-info
 ```toml
 # src-tauri/Cargo.toml
 [dependencies]
-tauri-plugin-device-info = "1.0.0"
+tauri-plugin-device-info = "1.0"  # See https://crates.io/crates/tauri-plugin-device-info for latest
 ```
 
 **2. Add the JavaScript package:**
@@ -45,9 +45,7 @@ Add the required permissions to your capabilities:
 ```json
 // src-tauri/capabilities/default.json
 {
-  "permissions": [
-    "device-info:default"
-  ]
+  "permissions": ["device-info:default"]
 }
 ```
 
@@ -62,35 +60,35 @@ Or add individual permissions:
 ## Basic Usage
 
 ```typescript
-import { 
-  getDeviceInfo, 
+import {
+  getDeviceInfo,
   getBatteryInfo,
   getNetworkInfo,
   getStorageInfo,
-  getDisplayInfo
-} from 'tauri-plugin-device-info-api';
+  getDisplayInfo,
+} from "tauri-plugin-device-info-api";
 
 async function loadDeviceInfo() {
   // Device information
   const device = await getDeviceInfo();
   console.log(`Device: ${device.model}`);
   console.log(`Manufacturer: ${device.manufacturer}`);
-  
+
   // Battery status
   const battery = await getBatteryInfo();
   console.log(`Battery: ${battery.level}%`);
   console.log(`Charging: ${battery.isCharging}`);
-  
+
   // Network information
   const network = await getNetworkInfo();
   console.log(`IP: ${network.ipAddress}`);
   console.log(`Type: ${network.networkType}`);
-  
+
   // Storage information
   const storage = await getStorageInfo();
   console.log(`Total: ${storage.totalSpace} bytes`);
   console.log(`Free: ${storage.freeSpace} bytes`);
-  
+
   // Display information
   const display = await getDisplayInfo();
   console.log(`Resolution: ${display.width}x${display.height}`);
@@ -103,13 +101,13 @@ async function loadDeviceInfo() {
 All types are exported and can be imported:
 
 ```typescript
-import type { 
-  DeviceInfoResponse, 
-  BatteryInfo, 
-  NetworkInfo, 
-  StorageInfo, 
-  DisplayInfo 
-} from 'tauri-plugin-device-info-api';
+import type {
+  DeviceInfoResponse,
+  BatteryInfo,
+  NetworkInfo,
+  StorageInfo,
+  DisplayInfo,
+} from "tauri-plugin-device-info-api";
 ```
 
 ## Next Steps

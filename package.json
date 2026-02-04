@@ -1,6 +1,6 @@
 {
   "name": "tauri-plugin-device-info-api",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "edisdev<edisdev14@gmail.com>",
   "description": "A Tauri plugin to access device information.",
   "license": "MIT",
@@ -8,14 +8,6 @@
     "type": "git",
     "url": "https://github.com/edisdev/tauri-plugin-device-info.git"
   },
-  "keywords": [
-    "tauri",
-    "plugin",
-    "device-info",
-    "system",
-    "mobile",
-    "desktop"
-  ],
   "bugs": {
     "url": "https://github.com/edisdev/tauri-plugin-device-info/issues"
   },
@@ -29,6 +21,33 @@
     "import": "./dist-js/index.js",
     "require": "./dist-js/index.cjs"
   },
+  "keywords": [
+    "tauri",
+    "tauri-plugin",
+    "tauri-plugin-device-info",
+    "tauri-v2",
+    "device-info",
+    "device",
+    "system-info",
+    "hardware",
+    "battery",
+    "battery-status",
+    "network",
+    "network-info",
+    "storage",
+    "disk-space",
+    "display",
+    "screen",
+    "cross-platform",
+    "desktop",
+    "mobile",
+    "ios",
+    "android",
+    "macos",
+    "windows",
+    "linux",
+    "rust"
+  ],
   "files": [
     "dist-js",
     "README.md"

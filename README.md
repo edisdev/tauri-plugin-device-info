@@ -50,21 +50,21 @@ yarn tauri add device-info
 
 ### Manual Installation
 
-**Cargo.toml:**
+**Cargo.toml:** [![Crates.io](https://img.shields.io/crates/v/tauri-plugin-device-info.svg)](https://crates.io/crates/tauri-plugin-device-info)
 
 ```toml
 [dependencies]
-tauri-plugin-device-info = "1.0.0"
+tauri-plugin-device-info = "1.0"  # Check crates.io for latest version
 # or from git
 tauri-plugin-device-info = { git = "https://github.com/edisdev/tauri-plugin-device-info" }
 ```
 
-**package.json:**
+**package.json:** [![npm version](https://img.shields.io/npm/v/tauri-plugin-device-info-api.svg)](https://www.npmjs.com/package/tauri-plugin-device-info-api)
 
 ```json
 {
   "dependencies": {
-    "tauri-plugin-device-info-api": "latest"
+    "tauri-plugin-device-info-api": "^1.0.0"
   }
 }
 ```

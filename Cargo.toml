@@ -1,11 +1,11 @@
 [package]
 name = "tauri-plugin-device-info"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["edisdev <edisdev14@gmail.com>"]
 description = "A Tauri plugin to access device information."
 license = "MIT"
 repository = "https://github.com/edisdev/tauri-plugin-device-info"
-homepage = "https://github.com/edisdev/tauri-plugin-device-info"
+homepage = "https://edisdev.github.io/tauri-plugin-device-info"
 edition = "2021"
 rust-version = "1.77.2"
 exclude = ["/examples", "/docs", "/dist-js", "/guest-js", "/node_modules"]
