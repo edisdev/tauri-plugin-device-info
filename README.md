@@ -7,13 +7,28 @@
 [![GitHub stars](https://img.shields.io/github/stars/edisdev/tauri-plugin-device-info?style=social)](https://github.com/edisdev/tauri-plugin-device-info)
 [![GitHub forks](https://img.shields.io/github/forks/edisdev/tauri-plugin-device-info?style=social)](https://github.com/edisdev/tauri-plugin-device-info/fork)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/edisdev/tauri-plugin-device-info/actions/workflows/build.yml/badge.svg)](https://github.com/edisdev/tauri-plugin-device-info/actions)
+[![Tauri](https://img.shields.io/badge/Tauri-v2-24C8DB?logo=tauri&logoColor=white)](https://tauri.app)
+[![Build](https://github.com/edisdev/tauri-plugin-device-info/actions/workflows/build.yml/badge.svg)](https://github.com/edisdev/tauri-plugin-device-info/actions/workflows/build.yml)
+[![Tests](https://github.com/edisdev/tauri-plugin-device-info/actions/workflows/test.yml/badge.svg)](https://github.com/edisdev/tauri-plugin-device-info/actions/workflows/test.yml)
 
 A comprehensive Tauri plugin to access device information including Battery, Network, Storage, Display, and System Details.
+
+> **One plugin, five data sources, five platforms.** Get battery, network, storage, display, and device identity through a single typed API — on Windows, macOS, Linux, iOS, and Android.
 
 ---
 
 **📖 [Read the Documentation](https://edisdev.github.io/tauri-plugin-device-info)**
+
+## ✨ Features
+
+- 🔋 **Battery** — charge level, charging state, and health
+- 🌐 **Network** — local IP, connection type, and MAC address
+- 💾 **Storage** — total/free space and storage type
+- 🖥️ **Display** — resolution, scale factor, and refresh rate
+- 🆔 **Device** — manufacturer, model, serial, and device name
+- 📱 **Truly cross-platform** — Windows, macOS, Linux, iOS, and Android
+- 🛡️ **Type-safe** — full TypeScript types and granular Tauri permissions
+- ✅ **Tested** — unit-tested core with CI across all desktop platforms
 
 ## 📸 Preview
 
@@ -320,6 +335,29 @@ If you want to grant only specific permissions:
 - Display refresh rate requires X11 (xrandr)
 - Device info read from `/sys/class/dmi/id/`
 
+## Testing
+
+The Rust core is covered by unit tests that run on every push and pull request
+via GitHub Actions across Linux, macOS, and Windows (see the **Tests** badge above).
+
+```bash
+# Run the Rust test suite
+cargo test
+
+# Lint and formatting (same checks as CI)
+cargo fmt -- --check
+cargo clippy -- -D warnings
+
+# JavaScript type check
+yarn tsc --noEmit
+```
+
+## Contributing
+
+Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md)
+and the [Code of Conduct](CODE_OF_CONDUCT.md) before opening a pull request.
+
 ## License
 
 MIT
+
