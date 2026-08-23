@@ -56,6 +56,8 @@ Or add individual permissions:
 - `device-info:allow-get-network-info`
 - `device-info:allow-get-storage-info`
 - `device-info:allow-get-display-info`
+- `device-info:allow-start-watching`
+- `device-info:allow-stop-watching`
 
 ## Basic Usage
 
@@ -96,6 +98,26 @@ async function loadDeviceInfo() {
 }
 ```
 
+## Reactive Updates
+
+Instead of calling a getter on a timer, subscribe to a kind and get a callback
+whenever the value changes. The current value is delivered immediately, then on
+every change. On macOS these are native and event-driven; elsewhere they fall
+back to change-detecting polling.
+
+```typescript
+import { watchBattery } from "tauri-plugin-device-info-api";
+
+const unwatch = await watchBattery((battery) => {
+  console.log(`Battery: ${battery.level}% (charging: ${battery.isCharging})`);
+});
+
+// Stop watching when you're done (e.g. on component teardown):
+await unwatch();
+```
+
+See the [Reactive Watch API](/api/watch) for all `watch*` functions and options.
+
 ## TypeScript Types
 
 All types are exported and can be imported:
@@ -107,6 +129,8 @@ import type {
   NetworkInfo,
   StorageInfo,
   DisplayInfo,
+  WatchOptions,
+  UnwatchFn,
 } from "tauri-plugin-device-info-api";
 ```
 

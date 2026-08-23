@@ -125,31 +125,29 @@ function formatBytes(bytes: number): string {
 {/if}
 ```
 
-## Polling for Updates
+## Reactive Updates
 
-For real-time battery monitoring:
+Prefer the [`watch*` API](/api/watch) over manual polling — it pushes updates on
+change (native event-driven on macOS, polling fallback elsewhere) and delivers
+the current value immediately.
 
 ```typescript
-import { getBatteryInfo } from 'tauri-plugin-device-info-api';
+import { watchBattery } from 'tauri-plugin-device-info-api';
 
-function startBatteryMonitor(callback: (level: number) => void) {
-  const interval = setInterval(async () => {
-    const battery = await getBatteryInfo();
-    if (battery.level !== null) {
-      callback(battery.level);
-    }
-  }, 30000); // Update every 30 seconds
-
-  return () => clearInterval(interval);
-}
-
-// Usage
-const stopMonitor = startBatteryMonitor((level) => {
-  console.log(`Battery level: ${level}%`);
+// Called immediately with the current value, then on every change.
+const stopMonitor = await watchBattery((battery) => {
+  console.log(`Battery level: ${battery.level}%`);
 });
 
-// Later: stopMonitor();
+// Later, when you no longer need updates:
+await stopMonitor();
 ```
+
+::: tip
+Only reach for a manual `setInterval` + `getBatteryInfo()` loop if you need a
+fixed cadence regardless of change. For "notify me when it changes", `watch*` is
+both simpler and cheaper.
+:::
 
 ## Error Handling
 

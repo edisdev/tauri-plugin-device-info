@@ -45,7 +45,8 @@ export default defineConfig({
                         { text: 'Battery Info', link: '/api/battery-info' },
                         { text: 'Network Info', link: '/api/network-info' },
                         { text: 'Storage Info', link: '/api/storage-info' },
-                        { text: 'Display Info', link: '/api/display-info' }
+                        { text: 'Display Info', link: '/api/display-info' },
+                        { text: 'Reactive Watch', link: '/api/watch' }
                     ]
                 },
                 {
