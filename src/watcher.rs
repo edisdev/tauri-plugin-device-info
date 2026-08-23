@@ -185,6 +185,10 @@ mod tests {
         }
     }
 
+    // The tests below use Tauri's mock runtime, which is only available off
+    // Windows here (see the target-gated dev-dependency in Cargo.toml).
+
+    #[cfg(not(target_os = "windows"))]
     #[test]
     fn unknown_kind_is_rejected() {
         let app = mock_app();
@@ -195,6 +199,7 @@ mod tests {
     /// Exercises the full monitor lifecycle (spawn → emit → stop → join → free)
     /// for every kind, including the native macOS event-driven paths. Catches
     /// FFI signature mistakes, use-after-free, and stop deadlocks at runtime.
+    #[cfg(not(target_os = "windows"))]
     #[test]
     fn start_and_stop_every_kind_does_not_crash() {
         let app = mock_app();
@@ -205,6 +210,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[test]
     fn reference_counting_keeps_monitor_until_last_unsubscribe() {
         let app = mock_app();
@@ -216,6 +222,7 @@ mod tests {
         stop(app.handle(), "battery").unwrap();
     }
 
+    #[cfg(not(target_os = "windows"))]
     fn mock_app() -> tauri::App<tauri::test::MockRuntime> {
         tauri::test::mock_builder()
             .plugin(crate::init())

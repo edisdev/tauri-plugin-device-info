@@ -39,5 +39,9 @@ battery = "0.7.8"
 [build-dependencies]
 tauri-plugin = { version = "2.5.2", features = ["build"] }
 
-[dev-dependencies]
+# Tauri's `test` feature (the mock runtime) fails to load on Windows CI with
+# STATUS_ENTRYPOINT_NOT_FOUND (0xc0000139), so enable it only off Windows. The
+# mock-based watcher tests are gated to match; the pure-logic tests still run
+# on every platform.
+[target.'cfg(not(target_os = "windows"))'.dev-dependencies]
 tauri = { version = "2.7.0", features = ["test"] }
