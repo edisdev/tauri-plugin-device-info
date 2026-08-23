@@ -212,7 +212,7 @@ mod tests {
         start(app.handle(), "battery", None).unwrap();
         stop(app.handle(), "battery").unwrap(); // one subscriber left
         stop(app.handle(), "battery").unwrap(); // last subscriber → tears down
-        // Extra stop on an already-removed kind must be a no-op, not a panic.
+                                                // Extra stop on an already-removed kind must be a no-op, not a panic.
         stop(app.handle(), "battery").unwrap();
     }
 
