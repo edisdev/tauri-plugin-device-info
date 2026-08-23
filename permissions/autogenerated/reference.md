@@ -9,6 +9,8 @@ Default permissions for the plugin
 - `allow-get-network-info`
 - `allow-get-storage-info`
 - `allow-get-display-info`
+- `allow-start-watching`
+- `allow-stop-watching`
 
 ## Permission Table
 
@@ -145,6 +147,58 @@ Enables the get_storage_info command without any pre-configured scope.
 <td>
 
 Denies the get_storage_info command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`device-info:allow-start-watching`
+
+</td>
+<td>
+
+Enables the start_watching command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`device-info:deny-start-watching`
+
+</td>
+<td>
+
+Denies the start_watching command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`device-info:allow-stop-watching`
+
+</td>
+<td>
+
+Enables the stop_watching command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`device-info:deny-stop-watching`
+
+</td>
+<td>
+
+Denies the stop_watching command without any pre-configured scope.
 
 </td>
 </tr>

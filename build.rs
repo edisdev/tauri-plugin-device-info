@@ -4,6 +4,8 @@ const COMMANDS: &[&str] = &[
     "get_network_info",
     "get_storage_info",
     "get_display_info",
+    "start_watching",
+    "stop_watching",
 ];
 
 fn main() {

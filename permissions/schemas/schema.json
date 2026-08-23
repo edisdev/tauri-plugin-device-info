@@ -355,10 +355,34 @@
           "markdownDescription": "Denies the get_storage_info command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-get-device-info`\n- `allow-get-battery-info`\n- `allow-get-network-info`\n- `allow-get-storage-info`\n- `allow-get-display-info`",
+          "description": "Enables the start_watching command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-start-watching",
+          "markdownDescription": "Enables the start_watching command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the start_watching command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-start-watching",
+          "markdownDescription": "Denies the start_watching command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the stop_watching command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-stop-watching",
+          "markdownDescription": "Enables the stop_watching command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the stop_watching command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-stop-watching",
+          "markdownDescription": "Denies the stop_watching command without any pre-configured scope."
+        },
+        {
+          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-get-device-info`\n- `allow-get-battery-info`\n- `allow-get-network-info`\n- `allow-get-storage-info`\n- `allow-get-display-info`\n- `allow-start-watching`\n- `allow-stop-watching`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-get-device-info`\n- `allow-get-battery-info`\n- `allow-get-network-info`\n- `allow-get-storage-info`\n- `allow-get-display-info`"
+          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-get-device-info`\n- `allow-get-battery-info`\n- `allow-get-network-info`\n- `allow-get-storage-info`\n- `allow-get-display-info`\n- `allow-start-watching`\n- `allow-stop-watching`"
         }
       ]
     }
