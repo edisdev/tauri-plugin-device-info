@@ -1,6 +1,7 @@
 # API Reference
 
-This plugin provides 5 main functions to access device information.
+This plugin provides 5 getters to read device information, plus a
+[reactive watch API](/api/watch) to subscribe to changes.
 
 ## Functions Overview
 
@@ -11,6 +12,7 @@ This plugin provides 5 main functions to access device information.
 | [`getNetworkInfo()`](/api/network-info) | Network connection details |
 | [`getStorageInfo()`](/api/storage-info) | Storage capacity information |
 | [`getDisplayInfo()`](/api/display-info) | Display properties and capabilities |
+| [`watch*()`](/api/watch) | Subscribe to changes for any of the above kinds |
 
 ## Quick Reference
 
@@ -20,7 +22,14 @@ import {
   getBatteryInfo,   // → BatteryInfo
   getNetworkInfo,   // → NetworkInfo
   getStorageInfo,   // → StorageInfo
-  getDisplayInfo    // → DisplayInfo
+  getDisplayInfo,   // → DisplayInfo
+
+  // Reactive watch API → Promise<UnwatchFn>
+  watchDevice,
+  watchBattery,
+  watchNetwork,
+  watchStorage,
+  watchDisplay
 } from 'tauri-plugin-device-info-api';
 ```
 
@@ -34,7 +43,9 @@ import type {
   BatteryInfo, 
   NetworkInfo, 
   StorageInfo, 
-  DisplayInfo 
+  DisplayInfo,
+  WatchOptions,
+  UnwatchFn
 } from 'tauri-plugin-device-info-api';
 ```
 

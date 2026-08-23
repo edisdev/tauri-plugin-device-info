@@ -61,6 +61,7 @@ mod mobile;
 mod commands;
 mod error;
 mod models;
+mod watcher;
 
 pub use error::{Error, Result};
 
@@ -88,7 +89,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::get_battery_info,
             commands::get_network_info,
             commands::get_storage_info,
-            commands::get_display_info
+            commands::get_display_info,
+            commands::start_watching,
+            commands::stop_watching
         ])
         .setup(|app, api| {
             #[cfg(mobile)]
@@ -96,6 +99,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             #[cfg(desktop)]
             let device_info = desktop::init(app, api)?;
             app.manage(device_info);
+            app.manage(watcher::WatcherState::default());
             Ok(())
         })
         .build()

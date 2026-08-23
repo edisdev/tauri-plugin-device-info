@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-start-watching"
+description = "Enables the start_watching command without any pre-configured scope."
+commands.allow = ["start_watching"]
+
+[[permission]]
+identifier = "deny-start-watching"
+description = "Denies the start_watching command without any pre-configured scope."
+commands.deny = ["start_watching"]

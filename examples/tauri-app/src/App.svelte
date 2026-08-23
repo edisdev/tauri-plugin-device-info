@@ -5,6 +5,9 @@
     getNetworkInfo,
     getStorageInfo,
     getDisplayInfo,
+    watchBattery,
+    watchNetwork,
+    watchDisplay,
   } from "tauri-plugin-device-info-api";
 
   import type {
@@ -13,6 +16,7 @@
     NetworkInfo,
     StorageInfo,
     DisplayInfo,
+    UnwatchFn,
   } from "tauri-plugin-device-info-api";
   import { onMount, onDestroy } from "svelte";
 
@@ -34,7 +38,8 @@
 
   let showChargingIcon = $state(false);
   let lastChargingState = false;
-  let pollingInterval: number | undefined;
+  let batteryInitialized = false;
+  let unwatchers: UnwatchFn[] = [];
 
   async function fetchData() {
     loading = true;
@@ -45,11 +50,6 @@
       networkInfo = await getNetworkInfo();
       storageInfo = await getStorageInfo();
       displayInfo = await getDisplayInfo();
-
-      // Initialize tracking state
-      if (batteryInfo) {
-        lastChargingState = batteryInfo.isCharging || false;
-      }
     } catch (e: any) {
       error = e.toString();
     } finally {
@@ -57,34 +57,41 @@
     }
   }
 
-  function startBatteryPolling() {
-    pollingInterval = setInterval(async () => {
-      try {
-        const info = await getBatteryInfo();
-
-        // Check if charging started (transition from false to true)
-        if (info.isCharging && !lastChargingState) {
+  // Reactive watchers replace manual setInterval polling.
+  // On macOS these are native event-driven (IOKit / Core Graphics /
+  // SystemConfiguration); elsewhere they fall back to change-detecting polling.
+  async function startWatchers() {
+    unwatchers.push(
+      await watchBattery((info) => {
+        // Show the overlay only on a real false → true charging transition,
+        // never on the initial value delivered when the watcher starts.
+        if (batteryInitialized && info.isCharging && !lastChargingState) {
           showChargingIcon = true;
           setTimeout(() => {
             showChargingIcon = false;
           }, 5000);
         }
-
+        batteryInitialized = true;
         lastChargingState = info.isCharging || false;
-        batteryInfo = info; // Update UI with latest info
-      } catch (e) {
-        console.error("Battery polling error:", e);
-      }
-    }, 1000); // Check every 1 second
+        batteryInfo = info;
+      }),
+    );
+    unwatchers.push(await watchNetwork((info) => (networkInfo = info)));
+    unwatchers.push(await watchDisplay((info) => (displayInfo = info)));
   }
 
   onMount(() => {
     fetchData();
-    startBatteryPolling();
+    // startWatchers is async; surface a failed start instead of leaving an
+    // unhandled rejection (e.g. missing permission or backend error).
+    startWatchers().catch((e) => {
+      error = e?.toString?.() ?? String(e);
+    });
   });
 
   onDestroy(() => {
-    if (pollingInterval) clearInterval(pollingInterval);
+    unwatchers.forEach((unwatch) => unwatch());
+    unwatchers = [];
   });
 </script>
 

@@ -28,3 +28,17 @@ pub(crate) async fn get_storage_info<R: Runtime>(app: AppHandle<R>) -> Result<St
 pub(crate) async fn get_display_info<R: Runtime>(app: AppHandle<R>) -> Result<DisplayInfo> {
     app.device_info().get_display_info()
 }
+
+#[command]
+pub(crate) async fn start_watching<R: Runtime>(
+    app: AppHandle<R>,
+    kind: String,
+    interval_ms: Option<u64>,
+) -> Result<()> {
+    crate::watcher::start(&app, &kind, interval_ms)
+}
+
+#[command]
+pub(crate) async fn stop_watching<R: Runtime>(app: AppHandle<R>, kind: String) -> Result<()> {
+    crate::watcher::stop(&app, &kind)
+}

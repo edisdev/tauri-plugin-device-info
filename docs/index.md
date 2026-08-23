@@ -29,6 +29,9 @@ features:
   - icon: 🖥️
     title: Display Info
     details: Resolution, scale factor, and refresh rate
+  - icon: 🔔
+    title: Reactive Watch
+    details: Subscribe to changes — native event-driven on macOS, polling fallback elsewhere
   - icon: 🌍
     title: Cross-platform
     details: Works on Windows, macOS, Linux, iOS, and Android
@@ -76,4 +79,14 @@ console.log(`Battery: ${battery.level}%`);
 // Get network info
 const network = await getNetworkInfo();
 console.log(`IP: ${network.ipAddress}`);
+```
+
+Prefer push over polling? Subscribe to changes with the
+[reactive watch API](/api/watch):
+
+```typescript
+import { watchBattery } from 'tauri-plugin-device-info-api';
+
+const unwatch = await watchBattery((b) => console.log(`Battery: ${b.level}%`));
+// await unwatch(); // stop when done
 ```

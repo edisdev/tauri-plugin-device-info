@@ -26,6 +26,7 @@ A comprehensive Tauri plugin to access device information including Battery, Net
 - 💾 **Storage** — total/free space and storage type
 - 🖥️ **Display** — resolution, scale factor, and refresh rate
 - 🆔 **Device** — manufacturer, model, serial, and device name
+- 🔔 **Reactive** — `watch*` APIs push updates on change (native event-driven on macOS, polling fallback elsewhere)
 - 📱 **Truly cross-platform** — Windows, macOS, Linux, iOS, and Android
 - 🛡️ **Type-safe** — full TypeScript types and granular Tauri permissions
 - ✅ **Tested** — unit-tested core with CI across all desktop platforms
@@ -193,6 +194,49 @@ console.log(display);
 }
 ```
 
+### Reactive Watch API
+
+Subscribe to a kind and get a callback whenever the value changes, instead of
+polling a getter yourself. The current value is delivered immediately, then on
+every change. On macOS these are native and event-driven (IOKit / Core Graphics
+/ SystemConfiguration); elsewhere they fall back to change-detecting polling.
+
+```typescript
+import {
+  watchBattery,
+  watchNetwork,
+  watchStorage,
+  watchDisplay,
+  watchDevice,
+} from "tauri-plugin-device-info-api";
+import type { UnwatchFn } from "tauri-plugin-device-info-api";
+
+// Called immediately with the current value, then on every change.
+const unwatch = await watchBattery((battery) => {
+  console.log(`Battery: ${battery.level}% (charging: ${battery.isCharging})`);
+});
+
+// Stop watching and remove the listener when you're done.
+await unwatch();
+```
+
+Cleaning up several watchers at once (e.g. on component teardown):
+
+```typescript
+const unwatchers: UnwatchFn[] = [];
+unwatchers.push(await watchNetwork((info) => console.log(info.networkType)));
+unwatchers.push(await watchDisplay((info) => console.log(info.width, info.height)));
+
+// Later:
+await Promise.all(unwatchers.map((unwatch) => unwatch()));
+```
+
+`watch*` accepts an optional `{ intervalMs }` that applies **only to polled
+kinds** (native kinds ignore it). Defaults and minimums are per kind: `device`
+defaults to 60000 ms (floored at 10000 ms), `storage` to 10000 ms (floored at
+1000 ms), and others to 2000 ms (floored at 250 ms). Subscribers to the same
+kind share one monitor, so only the first subscriber's interval takes effect.
+
 ## API Reference
 
 ### getDeviceInfo()
@@ -249,6 +293,26 @@ Returns display/screen information.
 | `scaleFactor` | `number?` | Display scale factor (e.g., 2.0 for Retina) |
 | `refreshRate` | `number?` | Screen refresh rate in Hz                   |
 
+### watch\*(callback, options?)
+
+Subscribes to a kind and invokes `callback` with the current value immediately,
+then on every change. Returns a `Promise<UnwatchFn>`; call the returned function
+to stop watching and remove the listener.
+
+| Function | Callback payload |
+| ----------------- | -------------------- |
+| `watchDevice()`   | `DeviceInfoResponse` |
+| `watchBattery()`  | `BatteryInfo`        |
+| `watchNetwork()`  | `NetworkInfo`        |
+| `watchStorage()`  | `StorageInfo`        |
+| `watchDisplay()`  | `DisplayInfo`        |
+
+**Options**
+
+| Field        | Type      | Description                                                                                   |
+| ------------ | --------- | -------------------------------------------------------------------------------------------- |
+| `intervalMs` | `number?` | Polling interval for polled kinds only (native kinds ignore it). Per-kind defaults/minimums. |
+
 ## TypeScript Types
 
 All types are exported and can be imported:
@@ -260,6 +324,8 @@ import type {
   NetworkInfo,
   StorageInfo,
   DisplayInfo,
+  WatchOptions,
+  UnwatchFn,
 } from "tauri-plugin-device-info-api";
 ```
 
@@ -289,6 +355,8 @@ Add the required permissions in your `capabilities` configuration.
 | `device-info:allow-get-network-info` | Allows getting network details    |
 | `device-info:allow-get-storage-info` | Allows getting storage info       |
 | `device-info:allow-get-display-info` | Allows getting display info       |
+| `device-info:allow-start-watching`   | Allows starting a reactive watch  |
+| `device-info:allow-stop-watching`    | Allows stopping a reactive watch  |
 
 ### Individual Permissions Example
 
@@ -351,6 +419,10 @@ cargo clippy -- -D warnings
 # JavaScript type check
 yarn tsc --noEmit
 ```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the release history and notable changes.
 
 ## Contributing
 
