@@ -119,9 +119,17 @@ pub(crate) fn start<R: Runtime>(
     let state = app.state::<WatcherState>();
     let mut subs = state.subs.lock().map_err(poisoned)?;
 
-    // A monitor is already running for this kind: just add a subscriber.
+    // A monitor is already running for this kind: add a subscriber, and hand it
+    // the current value. The running monitor only emits on *change*, so without
+    // this a late subscriber — a second component, or the same page after a
+    // webview reload — would never receive the initial value the API promises.
+    // Existing subscribers just see the unchanged value once more.
     if let Some(sub) = subs.get_mut(kind) {
         sub.refs += 1;
+        drop(subs); // don't hold the lock while reading (the device getter can be slow)
+        if let Ok(snapshot) = read_snapshot(app, kind) {
+            let _ = app.emit(&event_name(kind), &snapshot);
+        }
         return Ok(());
     }
 
@@ -220,6 +228,41 @@ mod tests {
         stop(app.handle(), "battery").unwrap(); // last subscriber → tears down
                                                 // Extra stop on an already-removed kind must be a no-op, not a panic.
         stop(app.handle(), "battery").unwrap();
+    }
+
+    /// A second subscriber to a kind that is already being watched (e.g. the
+    /// same page after a webview reload) must still get the current value,
+    /// even though the running monitor only emits on change.
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn late_subscriber_receives_current_value() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+        use tauri::Listener;
+
+        let app = mock_app();
+        let received = Arc::new(AtomicUsize::new(0));
+        let counter = received.clone();
+        app.handle().listen_any(event_name("storage"), move |_| {
+            counter.fetch_add(1, Ordering::SeqCst);
+        });
+
+        // First subscriber: the poller emits the initial value.
+        start(app.handle(), "storage", None).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        let after_first = received.load(Ordering::SeqCst);
+        assert!(after_first >= 1, "first subscriber got no initial value");
+
+        // Second subscriber while the monitor runs: storage hasn't changed, so
+        // only the late-subscriber emit can deliver anything.
+        start(app.handle(), "storage", None).unwrap();
+        assert!(
+            received.load(Ordering::SeqCst) > after_first,
+            "late subscriber got no current value"
+        );
+
+        stop(app.handle(), "storage").unwrap();
+        stop(app.handle(), "storage").unwrap();
     }
 
     #[cfg(not(target_os = "windows"))]
