@@ -1,7 +1,8 @@
 # API Reference
 
-This plugin provides 5 getters to read device information, plus a
-[reactive watch API](/api/watch) to subscribe to changes.
+This plugin provides 5 getters to read device information, a
+[reactive watch API](/api/watch) to subscribe to changes, and
+[adaptive signals](/api/adaptive) that turn readings into decisions.
 
 ## Functions Overview
 
@@ -13,6 +14,8 @@ This plugin provides 5 getters to read device information, plus a
 | [`getStorageInfo()`](/api/storage-info) | Storage capacity information |
 | [`getDisplayInfo()`](/api/display-info) | Display properties and capabilities |
 | [`watch*()`](/api/watch) | Subscribe to changes for any of the above kinds |
+| [`getPowerProfile()`](/api/adaptive#power-profile) | `full` / `balanced` / `saver` from battery, power saving and thermal state |
+| [`getDeviceTier()`](/api/adaptive#device-tier) | `low` / `mid` / `high` hardware capability class |
 
 ## Quick Reference
 
@@ -23,13 +26,16 @@ import {
   getNetworkInfo,   // → NetworkInfo
   getStorageInfo,   // → StorageInfo
   getDisplayInfo,   // → DisplayInfo
+  getPowerProfile,  // → PowerProfile
+  getDeviceTier,    // → DeviceTier
 
   // Reactive watch API → Promise<UnwatchFn>
   watchDevice,
   watchBattery,
   watchNetwork,
   watchStorage,
-  watchDisplay
+  watchDisplay,
+  watchPowerProfile
 } from 'tauri-plugin-device-info-api';
 ```
 
@@ -44,6 +50,8 @@ import type {
   NetworkInfo, 
   StorageInfo, 
   DisplayInfo,
+  PowerProfile,
+  DeviceTier,
   WatchOptions,
   UnwatchFn
 } from 'tauri-plugin-device-info-api';

@@ -32,6 +32,9 @@ features:
   - icon: 🔔
     title: Reactive Watch
     details: Subscribe to changes — native event-driven on macOS, polling fallback elsewhere
+  - icon: ⚡
+    title: Adaptive Apps
+    details: One full / balanced / saver power signal and a low / mid / high device tier, so your app adjusts itself
   - icon: 🌍
     title: Cross-platform
     details: Works on Windows, macOS, Linux, iOS, and Android
@@ -40,11 +43,12 @@ features:
 ## Preview
 
 <div align="center">
-  <img src="/DeviceInfo_Mac.png" alt="macOS Preview" width="600" style="border-radius: 8px; margin-bottom: 20px;">
-  <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-    <img src="/DeviceInfo_Android.png" alt="Android Preview" width="300" style="border-radius: 8px;">
-    <img src="/DeviceInfo_iOS.png" alt="iOS Preview" width="300" style="border-radius: 8px;">
+  <img src="/DeviceInfo_Promo.gif" alt="Vitals, the example app, running on macOS and iOS side by side" width="900" style="border-radius: 8px; margin-bottom: 20px;">
+  <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start; flex-wrap: wrap;">
+    <img src="/DeviceInfo_macOS.gif" alt="Vitals on macOS: switching pages, simulating the Saver profile and changing themes" width="560" style="border-radius: 8px;">
+    <img src="/DeviceInfo_iOS.gif" alt="Vitals on iPhone: live battery and thermal readings, the Adaptive page and themes" width="230" style="border-radius: 8px;">
   </div>
+  <p><i><b>Vitals</b> — the example app built on this plugin, on a MacBook Pro (M5 Pro) and an iPhone 15 Pro.</i></p>
 </div>
 
 ## Platform Support

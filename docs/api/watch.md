@@ -16,6 +16,7 @@ function that stops watching and removes the listener.
 | `watchStorage()` | `StorageInfo` | Total / free space |
 | `watchDisplay()` | `DisplayInfo` | Resolution, scale, refresh rate (e.g. plugging in a monitor) |
 | `watchDevice()` | `DeviceInfoResponse` | Device identity fields (rarely changes) |
+| `watchPowerProfile()` | `PowerProfile` | Power profile, battery, Low Power Mode, thermal state — see [Adaptive Apps](/api/adaptive) |
 
 ## Signatures
 

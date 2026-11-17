@@ -5,6 +5,40 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Adaptive Apps** — signals that turn raw readings into decisions.
+  - `getPowerProfile()` / `watchPowerProfile()` — one `full | balanced | saver`
+    recommendation combining battery level, charging state, OS power-saving mode
+    (Low Power Mode, Battery Saver, Linux `low-power` profile) and thermal
+    pressure, plus the `reasons` behind it.
+  - `getDeviceTier()` — a `low | mid | high` capability class and 0-100 score
+    from memory, CPU cores and peak clock, scored against the device's form
+    factor; honours Android's low-RAM flag and media performance class.
+  - `get_power_profile` / `get_device_tier` commands with matching
+    `allow-get-power-profile` / `allow-get-device-tier` permissions, included in
+    `device-info:default`.
+  - New `power` watch kind (polled, default 5 s).
+  - Rust: `get_power_profile()`, `get_device_tier()`, `get_power_state()` and
+    `get_hardware_info()` on `DeviceInfo`, and the pure
+    `adaptive::power_profile` / `adaptive::device_tier` functions.
+  - New types: `PowerProfile`, `PowerProfileKind`, `PowerProfileReason`,
+    `ThermalState`, `DeviceTier`, `DeviceTierKind`, `HardwareInfo`.
+
+### Fixed
+
+- **Watch API: late subscribers now get the current value.** A `watch*` call
+  for a kind that was already being watched (a second component, or the same
+  page after a webview reload) only received *future* changes, because the
+  running monitor emits on change. The plugin now sends the current value to
+  every new subscriber, as documented.
+- **iOS release builds failed to link** with `Undefined symbols:
+  _init_plugin_device_info` on Xcode 27 / Swift 6.4, which hides `internal`
+  symbols when merging a package's objects in release. The Swift entry point is
+  now `public`.
+
 ## [1.1.1] - 2026-11-17
 
 ### Fixed
