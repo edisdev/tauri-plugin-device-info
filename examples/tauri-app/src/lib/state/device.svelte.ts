@@ -72,32 +72,67 @@ class DeviceStore {
     #ticker: ReturnType<typeof setInterval> | undefined;
     #nextId = 0;
     #started = false;
+    /** Bumped by every stop(), so a start() still awaiting can tell it is stale. */
+    #generation = 0;
 
     async start() {
         if (this.#started) return;
         this.#started = true;
+        const generation = ++this.#generation;
+        const live = () => generation === this.#generation;
         this.#ticker = setInterval(() => (this.now = Date.now()), 15_000);
 
-        try {
-            // Static for the session: read once.
-            [this.device, this.tier] = await Promise.all([getDeviceInfo(), getDeviceTier()]);
+        // Everything starts independently: one failing read or watcher must not
+        // keep the others from starting, or leak the ones that did.
+        // Device info and tier are static for the session: read once. Everything
+        // else is pushed: the first callback is the current value.
+        const guard =
+            <T>(handler: (value: T) => void) =>
+            (value: T) => {
+                if (live()) handler(value);
+            };
+        const watchers: [string, Promise<UnwatchFn>][] = [
+            ["watchBattery", watchBattery(guard((info) => this.#onBattery(info)))],
+            ["watchNetwork", watchNetwork(guard((info) => this.#onNetwork(info)))],
+            ["watchStorage", watchStorage(guard((info) => this.#onStorage(info)))],
+            ["watchDisplay", watchDisplay(guard((info) => this.#onDisplay(info)))],
+            ["watchPowerProfile", watchPowerProfile(guard((info) => this.#onPower(info)))],
+        ];
 
-            // Everything else is pushed: the first callback is the current value.
-            this.#unwatchers = await Promise.all([
-                watchBattery((info) => this.#onBattery(info)),
-                watchNetwork((info) => this.#onNetwork(info)),
-                watchStorage((info) => this.#onStorage(info)),
-                watchDisplay((info) => this.#onDisplay(info)),
-                watchPowerProfile((info) => this.#onPower(info)),
-            ]);
-        } catch (e) {
-            this.error = String(e);
+        const [device, tier, ...started] = await Promise.allSettled([
+            getDeviceInfo(),
+            getDeviceTier(),
+            ...watchers.map(([, promise]) => promise),
+        ]);
+
+        const unwatchers: UnwatchFn[] = [];
+        const errors: string[] = [];
+        started.forEach((result, i) => {
+            if (result.status === "fulfilled") unwatchers.push(result.value as UnwatchFn);
+            else errors.push(`${watchers[i][0]}: ${result.reason}`);
+        });
+
+        // stop() ran while we were awaiting (HMR, remount): undo what this
+        // start() created instead of handing it to the store.
+        if (!live()) {
+            unwatchers.forEach((unwatch) => unwatch().catch(() => {}));
+            return;
         }
+
+        if (device.status === "fulfilled") this.device = device.value as DeviceInfo;
+        else errors.push(`getDeviceInfo: ${device.reason}`);
+        if (tier.status === "fulfilled") this.tier = tier.value as DeviceTier;
+        else errors.push(`getDeviceTier: ${tier.reason}`);
+
+        this.#unwatchers = unwatchers;
+        this.error = errors.length ? errors.join("; ") : null;
     }
 
     stop() {
+        this.#generation++;
         clearInterval(this.#ticker);
-        this.#unwatchers.forEach((unwatch) => unwatch());
+        this.#ticker = undefined;
+        this.#unwatchers.forEach((unwatch) => unwatch().catch(() => {}));
         this.#unwatchers = [];
         this.#started = false;
     }

@@ -11,5 +11,3 @@ export const REASON_LABELS: Record<PowerProfileReason, string> = {
     batteryCritical: "Battery ≤ 20%",
     batteryLow: "Battery ≤ 40%",
 };
-
-export const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
