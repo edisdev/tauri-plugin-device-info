@@ -241,7 +241,10 @@ class KeychainHelper {
     }
 }
 
+// Must be `public`: Rust links against this symbol, and since Swift 6.4 (Xcode 27)
+// release builds hide `internal` symbols when merging the package's objects,
+// which fails the link with "Undefined symbols: _init_plugin_device_info".
 @_cdecl("init_plugin_device_info")
-func initPlugin() -> Plugin {
+public func initPlugin() -> Plugin {
     return DeviceInfoPlugin()
 }
