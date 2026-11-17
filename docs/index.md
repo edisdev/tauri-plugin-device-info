@@ -43,12 +43,12 @@ features:
 ## Preview
 
 <div align="center">
-  <img src="/DeviceInfo_Promo.gif" alt="Vitals, the example app, running on macOS and iOS side by side" width="900" style="border-radius: 8px; margin-bottom: 20px;">
+  <img src="/DeviceInfo_Promo.gif" alt="The plugin in the example app: live signals on macOS and iOS, then the power profile adapting on Windows and Android" width="900" style="border-radius: 8px; margin-bottom: 20px;">
   <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start; flex-wrap: wrap;">
     <img src="/DeviceInfo_macOS.gif" alt="Vitals on macOS: switching pages, simulating the Saver profile and changing themes" width="560" style="border-radius: 8px;">
     <img src="/DeviceInfo_iOS.gif" alt="Vitals on iPhone: live battery and thermal readings, the Adaptive page and themes" width="230" style="border-radius: 8px;">
   </div>
-  <p><i><b>Vitals</b> — the example app built on this plugin, on a MacBook Pro (M5 Pro) and an iPhone 15 Pro.</i></p>
+  <p><i><b>Vitals</b> — the example app built on this plugin. Real readings on macOS, iOS, Windows 10 and Android 16.</i></p>
 </div>
 
 ## Platform Support

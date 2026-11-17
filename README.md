@@ -35,12 +35,12 @@ A comprehensive Tauri plugin to access device information including Battery, Net
 ## 📸 Preview
 
 <div align="center">
-  <img src="./docs/public/DeviceInfo_Promo.gif" alt="Vitals, the example app, running on macOS and iOS side by side" width="900">
+  <img src="./docs/public/DeviceInfo_Promo.gif" alt="The plugin in the example app: live signals on macOS and iOS, then the power profile adapting on Windows and Android" width="900">
   <br><br>
   <img src="./docs/public/DeviceInfo_macOS.gif" alt="Vitals on macOS: switching pages, simulating the Saver profile and changing themes" width="560">
   <img src="./docs/public/DeviceInfo_iOS.gif" alt="Vitals on iPhone: live battery and thermal readings, the Adaptive page and themes" width="230">
   <p><i><b>Vitals</b> — the example app in <a href="./examples/tauri-app">examples/tauri-app</a>, built on this plugin.<br>
-  Real readings from a MacBook Pro (M5 Pro) and an iPhone 15 Pro.</i></p>
+  Real readings on macOS, iOS, Windows 10 and Android 16.</i></p>
 </div>
 
 ## Platform Support
