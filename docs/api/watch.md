@@ -16,6 +16,7 @@ function that stops watching and removes the listener.
 | `watchStorage()` | `StorageInfo` | Total / free space |
 | `watchDisplay()` | `DisplayInfo` | Resolution, scale, refresh rate (e.g. plugging in a monitor) |
 | `watchDevice()` | `DeviceInfoResponse` | Device identity fields (rarely changes) |
+| `watchPowerProfile()` | `PowerProfile` | Power profile, battery, Low Power Mode, thermal state — see [Adaptive Apps](/api/adaptive) |
 
 ## Signatures
 
@@ -115,7 +116,8 @@ const unwatch = await watchStorage((info) => console.log(info.freeSpace), {
 ::: tip Reference counting
 Subscribers to the same kind share a single monitor. It starts on the first
 subscriber and is torn down once the last one calls `unwatch()`. Only the first
-subscriber's `intervalMs` takes effect.
+subscriber's `intervalMs` takes effect. A subscriber that joins a running
+monitor still gets the current value immediately (the monitor's latest one).
 :::
 
 ## Permissions
@@ -147,7 +149,10 @@ The watch API requires the `start-watching` and `stop-watching` commands.
 ## Notes
 
 - The current value is always delivered once, immediately, so you don't need a
-  separate `getBatteryInfo()` call to seed initial state.
+  separate `getBatteryInfo()` call to seed initial state. It goes only to the
+  callback of the `watch*` call that subscribed: other subscribers to the same
+  kind are not re-notified, and after that every callback fires only when the
+  value actually changes.
 - `unwatch()` is async — `await` it if you need the backend monitor fully torn
   down before continuing.
 - On a kind with a native source (e.g. `battery` on macOS), `intervalMs` is

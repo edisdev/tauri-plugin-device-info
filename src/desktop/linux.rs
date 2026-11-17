@@ -1,5 +1,8 @@
+use super::sysfs::{external_power_online, select_cpu_zones, thermal_state_from_zones};
 use crate::models::DeviceInfoResponse;
 use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 fn read(path: &str) -> Option<String> {
     fs::read_to_string(path).ok().map(|s| s.trim().to_string())
@@ -44,6 +47,118 @@ pub fn get_display_refresh_rate() -> Option<f64> {
         }
     }
     None
+}
+
+// ============================================================================
+// Power state
+// ============================================================================
+
+/// A CPU/SoC thermal zone, resolved once: which file to poll and its critical trip.
+struct CpuZone {
+    temp: PathBuf,
+    critical: Option<f64>,
+}
+
+/// Reads the power-saving mode, thermal state and AC power from sysfs.
+///
+/// - Low power: the ACPI platform profile (`/sys/firmware/acpi/platform_profile`),
+///   which power-profiles-daemon and desktop power menus drive.
+/// - Thermal: the CPU/SoC `/sys/class/thermal/thermal_zone*` zones, judged by
+///   their headroom to their own critical trip point (see [`thermal_state_from_zones`]).
+/// - External power: any online non-battery `/sys/class/power_supply/*`.
+pub fn get_power_state() -> crate::models::PowerState {
+    let low_power_mode = read("/sys/firmware/acpi/platform_profile").map(|p| p == "low-power");
+
+    let zones: Vec<(f64, Option<f64>)> = cpu_zones()
+        .iter()
+        .filter_map(|zone| Some((read_millidegrees(&zone.temp)?, zone.critical)))
+        .collect();
+
+    crate::models::PowerState {
+        low_power_mode,
+        thermal_state: thermal_state_from_zones(&zones),
+        on_external_power: on_external_power(),
+    }
+}
+
+/// The CPU/SoC thermal zones and their critical trips. Zone types and trip
+/// points are static, so they are scanned once; each poll then reads only `temp`.
+fn cpu_zones() -> &'static [CpuZone] {
+    static ZONES: OnceLock<Vec<CpuZone>> = OnceLock::new();
+    ZONES.get_or_init(|| {
+        let zones: Vec<(String, PathBuf)> = fs::read_dir("/sys/class/thermal")
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().starts_with("thermal_zone"))
+            .map(|e| {
+                let dir = e.path();
+                let kind = read_path(&dir.join("type")).unwrap_or_default();
+                (kind, dir)
+            })
+            .collect();
+
+        select_cpu_zones(zones)
+            .into_iter()
+            .map(|dir| CpuZone {
+                critical: critical_trip(&dir),
+                temp: dir.join("temp"),
+            })
+            .collect()
+    })
+}
+
+/// Whether any non-battery power supply (AC adapter, USB-C charger) is online.
+fn on_external_power() -> Option<bool> {
+    let supplies: Vec<(String, Option<bool>)> = fs::read_dir("/sys/class/power_supply")
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|e| {
+            let dir = e.path();
+            let kind = read_path(&dir.join("type"))?;
+            let online = read_path(&dir.join("online")).map(|v| v == "1");
+            Some((kind, online))
+        })
+        .collect();
+    external_power_online(&supplies)
+}
+
+fn read_path(path: &Path) -> Option<String> {
+    fs::read_to_string(path).ok().map(|s| s.trim().to_string())
+}
+
+fn read_millidegrees(path: &Path) -> Option<f64> {
+    let raw: f64 = fs::read_to_string(path).ok()?.trim().parse().ok()?;
+    Some(raw / 1000.0)
+}
+
+/// Finds the zone's `critical` trip point temperature, in °C.
+fn critical_trip(zone: &Path) -> Option<f64> {
+    (0..16).find_map(|i| {
+        let kind = fs::read_to_string(zone.join(format!("trip_point_{i}_type"))).ok()?;
+        if kind.trim() != "critical" {
+            return None;
+        }
+        read_millidegrees(&zone.join(format!("trip_point_{i}_temp")))
+    })
+}
+
+/// Highest `cpuinfo_max_freq` across CPUs, in MHz. sysinfo only reports the
+/// *current* clock on Linux, which under-reads an idle CPU.
+pub fn get_cpu_max_frequency_mhz() -> Option<u64> {
+    fs::read_dir("/sys/devices/system/cpu")
+        .ok()?
+        .flatten()
+        .filter_map(|e| {
+            let khz: u64 = fs::read_to_string(e.path().join("cpufreq/cpuinfo_max_freq"))
+                .ok()?
+                .trim()
+                .parse()
+                .ok()?;
+            Some(khz / 1000)
+        })
+        .max()
 }
 
 #[cfg(test)]

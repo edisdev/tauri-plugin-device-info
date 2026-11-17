@@ -1,6 +1,6 @@
 # iOS
 
-![iOS Device Info Preview](/DeviceInfo_iOS.png){width=300}
+![Vitals, the example app, on iPhone 15 Pro](/DeviceInfo_iOS.gif){width=300}
 
 ## Implementation
 

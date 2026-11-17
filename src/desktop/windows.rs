@@ -88,6 +88,38 @@ pub fn get_display_refresh_rate() -> Option<f64> {
         .find_map(|r| r.current_refresh_rate.map(|rate| rate as f64))
 }
 
+/// Reads Battery Saver / Energy Saver state and AC power from `GetSystemPowerStatus`.
+///
+/// `SystemStatusFlag` (exposed by winapi as `Reserved1`) is `1` while the
+/// saver is on (Windows 10+). `ACLineStatus` is `1` on AC, `0` on battery and
+/// `255` when unknown. Windows has no public thermal-pressure API, so
+/// `thermal_state` is always `None`.
+pub fn get_power_state() -> crate::models::PowerState {
+    use winapi::um::winbase::{GetSystemPowerStatus, SYSTEM_POWER_STATUS};
+
+    let mut status: SYSTEM_POWER_STATUS = unsafe { std::mem::zeroed() };
+    let ok = unsafe { GetSystemPowerStatus(&mut status) } != 0;
+
+    crate::models::PowerState {
+        low_power_mode: ok.then_some(status.Reserved1 & 1 == 1),
+        thermal_state: None,
+        on_external_power: if ok {
+            ac_line_status_to_external_power(status.ACLineStatus)
+        } else {
+            None
+        },
+    }
+}
+
+/// Maps `SYSTEM_POWER_STATUS::ACLineStatus` to "on external power".
+fn ac_line_status_to_external_power(status: u8) -> Option<bool> {
+    match status {
+        0 => Some(false),
+        1 => Some(true),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -191,5 +223,12 @@ mod tests {
         assert!(fallback.device_name.is_none());
         assert!(fallback.manufacturer.is_none());
         assert!(fallback.uuid.is_none());
+    }
+
+    #[test]
+    fn ac_line_status_maps_to_external_power() {
+        assert_eq!(ac_line_status_to_external_power(0), Some(false));
+        assert_eq!(ac_line_status_to_external_power(1), Some(true));
+        assert_eq!(ac_line_status_to_external_power(255), None);
     }
 }

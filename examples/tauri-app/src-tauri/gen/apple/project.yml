@@ -2,7 +2,7 @@ name: tauri-app
 options:
   bundleIdPrefix: com.tauri.plugin.deviceinfo.example
   deploymentTarget:
-    iOS: 14.0
+    iOS: 15.0
 fileGroups: [../../src]
 configs:
   debug: debug
@@ -39,6 +39,9 @@ targets:
     info:
       path: tauri-app_iOS/Info.plist
       properties:
+        CFBundleDisplayName: Vitals
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
         LSRequiresIPhoneOS: true
         UILaunchStoryboardName: LaunchScreen
         UIRequiredDeviceCapabilities: [arm64, metal]

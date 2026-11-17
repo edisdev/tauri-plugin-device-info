@@ -1,6 +1,6 @@
 # macOS
 
-![macOS Device Info Preview](/DeviceInfo_Mac.png)
+![Vitals, the example app, on macOS](/DeviceInfo_macOS.gif)
 
 ## Implementation
 

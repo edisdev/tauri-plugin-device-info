@@ -54,4 +54,15 @@ impl<R: Runtime> DeviceInfo<R> {
             .run_mobile_plugin("get_display_info", ())
             .map_err(Into::into)
     }
+    pub fn get_power_state(&self) -> crate::Result<PowerState> {
+        self.0
+            .run_mobile_plugin("get_power_state", ())
+            .map_err(Into::into)
+    }
+
+    pub fn get_hardware_info(&self) -> crate::Result<HardwareInfo> {
+        self.0
+            .run_mobile_plugin("get_hardware_info", ())
+            .map_err(Into::into)
+    }
 }

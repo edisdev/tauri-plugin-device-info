@@ -1,6 +1,6 @@
 # Windows
 
-![Windows Device Info Preview](/DeviceInfo_Windows.png)
+![The example app on Windows 10: pages, the device tier and simulating the Saver profile](/DeviceInfo_Windows.gif)
 
 ## Implementation
 

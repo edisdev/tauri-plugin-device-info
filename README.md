@@ -26,6 +26,7 @@ A comprehensive Tauri plugin to access device information including Battery, Net
 - 💾 **Storage** — total/free space and storage type
 - 🖥️ **Display** — resolution, scale factor, and refresh rate
 - 🆔 **Device** — manufacturer, model, serial, and device name
+- ⚡ **Adaptive** — one `full | balanced | saver` power signal and a `low | mid | high` device tier, so your app can adjust itself
 - 🔔 **Reactive** — `watch*` APIs push updates on change (native event-driven on macOS, polling fallback elsewhere)
 - 📱 **Truly cross-platform** — Windows, macOS, Linux, iOS, and Android
 - 🛡️ **Type-safe** — full TypeScript types and granular Tauri permissions
@@ -33,15 +34,13 @@ A comprehensive Tauri plugin to access device information including Battery, Net
 
 ## 📸 Preview
 
-<div>
-  <img src="./docs/public/DeviceInfo_Android_Gif.gif" alt="Android Preview GIF" width="250">
-  <br>
-  <img src="./docs/public/DeviceInfo_Mac.png" alt="macOS Preview" width="400">
-  <img src="./docs/public/DeviceInfo_Windows.png" alt="Windows Preview" width="400">
-  <br>
-  <img src="./docs/public/DeviceInfo_Android.png" alt="Android Preview" width="250">
-  <img src="./docs/public/DeviceInfo_iOS.png" alt="iOS Preview" width="250">
-  <p><i>Example Dashboard Application across platforms</i></p>
+<div align="center">
+  <img src="./docs/public/DeviceInfo_Promo.gif" alt="The plugin in the example app: live signals on macOS and iOS, then the power profile adapting on Windows and Android" width="900">
+  <br><br>
+  <img src="./docs/public/DeviceInfo_macOS.gif" alt="Vitals on macOS: switching pages, simulating the Saver profile and changing themes" width="560">
+  <img src="./docs/public/DeviceInfo_iOS.gif" alt="Vitals on iPhone: live battery and thermal readings, the Adaptive page and themes" width="230">
+  <p><i><b>Vitals</b> — the example app in <a href="./examples/tauri-app">examples/tauri-app</a>, built on this plugin.<br>
+  Real readings on macOS, iOS, Windows 10 and Android 16.</i></p>
 </div>
 
 ## Platform Support
@@ -70,7 +69,7 @@ yarn tauri add device-info
 
 ```toml
 [dependencies]
-tauri-plugin-device-info = "1.0"  # Check crates.io for latest version
+tauri-plugin-device-info = "1.2"  # Check crates.io for latest version
 # or from git
 tauri-plugin-device-info = { git = "https://github.com/edisdev/tauri-plugin-device-info" }
 ```
@@ -80,7 +79,7 @@ tauri-plugin-device-info = { git = "https://github.com/edisdev/tauri-plugin-devi
 ```json
 {
   "dependencies": {
-    "tauri-plugin-device-info-api": "^1.0.0"
+    "tauri-plugin-device-info-api": "^1.2.0"
   }
 }
 ```
@@ -234,8 +233,31 @@ await Promise.all(unwatchers.map((unwatch) => unwatch()));
 `watch*` accepts an optional `{ intervalMs }` that applies **only to polled
 kinds** (native kinds ignore it). Defaults and minimums are per kind: `device`
 defaults to 60000 ms (floored at 10000 ms), `storage` to 10000 ms (floored at
-1000 ms), and others to 2000 ms (floored at 250 ms). Subscribers to the same
+1000 ms), `power` to 5000 ms (floored at 1000 ms), and others to 2000 ms (floored at 250 ms). Subscribers to the same
 kind share one monitor, so only the first subscriber's interval takes effect.
+
+### Adaptive Apps
+
+Raw readings tell you what the device is doing; these tell you what to do about
+it. `getPowerProfile()` folds battery, Low Power Mode / Battery Saver and thermal
+pressure into one recommendation, and `getDeviceTier()` classifies the hardware.
+
+```typescript
+import { watchPowerProfile, getDeviceTier } from "tauri-plugin-device-info-api";
+
+// Back off when the device is hot, in Low Power Mode, or low on battery.
+await watchPowerProfile(({ profile, reasons }) => {
+  document.documentElement.dataset.power = profile; // "full" | "balanced" | "saver"
+  console.log(reasons); // e.g. ["thermalSerious", "batteryLow"]
+});
+
+// Pick a quality level the hardware can sustain.
+const { tier, score } = await getDeviceTier(); // "low" | "mid" | "high", 0-100
+const particles = { low: 0, mid: 200, high: 1000 }[tier];
+```
+
+See [Adaptive Apps](https://edisdev.github.io/tauri-plugin-device-info/api/adaptive)
+for the exact rules, thresholds and per-platform sources.
 
 ## API Reference
 
@@ -293,6 +315,29 @@ Returns display/screen information.
 | `scaleFactor` | `number?` | Display scale factor (e.g., 2.0 for Retina) |
 | `refreshRate` | `number?` | Screen refresh rate in Hz                   |
 
+### getPowerProfile()
+
+Returns a recommendation for how much work the app should do right now.
+
+| Field          | Type                                             | Description                                     |
+| -------------- | ------------------------------------------------ | ----------------------------------------------- |
+| `profile`      | `"full" \| "balanced" \| "saver"`                | Most restrictive profile implied by any reason  |
+| `reasons`      | `PowerProfileReason[]`                           | Why it isn't `full` (empty when it is)          |
+| `batteryLevel` | `number?`                                        | 0-100; absent without a battery                 |
+| `isCharging`   | `boolean?`                                       | Whether the device is charging                  |
+| `lowPowerMode` | `boolean?`                                       | Low Power Mode / Battery Saver / `low-power`    |
+| `thermalState` | `"nominal" \| "fair" \| "serious" \| "critical"?` | Thermal pressure (not available on Windows)     |
+
+### getDeviceTier()
+
+Classifies the hardware relative to devices of the same form factor.
+
+| Field      | Type                         | Description                                    |
+| ---------- | ---------------------------- | ---------------------------------------------- |
+| `tier`     | `"low" \| "mid" \| "high"`   | Capability class                               |
+| `score`    | `number`                     | 0-100 (`low` < 30 ≤ `mid` < 65 ≤ `high`)       |
+| `hardware` | `HardwareInfo`               | CPU cores, CPU model, peak clock, total memory |
+
 ### watch\*(callback, options?)
 
 Subscribes to a kind and invokes `callback` with the current value immediately,
@@ -306,6 +351,7 @@ to stop watching and remove the listener.
 | `watchNetwork()`  | `NetworkInfo`        |
 | `watchStorage()`  | `StorageInfo`        |
 | `watchDisplay()`  | `DisplayInfo`        |
+| `watchPowerProfile()` | `PowerProfile`   |
 
 **Options**
 
@@ -324,6 +370,9 @@ import type {
   NetworkInfo,
   StorageInfo,
   DisplayInfo,
+  PowerProfile,
+  DeviceTier,
+  HardwareInfo,
   WatchOptions,
   UnwatchFn,
 } from "tauri-plugin-device-info-api";
@@ -355,6 +404,8 @@ Add the required permissions in your `capabilities` configuration.
 | `device-info:allow-get-network-info` | Allows getting network details    |
 | `device-info:allow-get-storage-info` | Allows getting storage info       |
 | `device-info:allow-get-display-info` | Allows getting display info       |
+| `device-info:allow-get-power-profile` | Allows getting the power profile |
+| `device-info:allow-get-device-tier`  | Allows getting the device tier    |
 | `device-info:allow-start-watching`   | Allows starting a reactive watch  |
 | `device-info:allow-stop-watching`    | Allows stopping a reactive watch  |
 

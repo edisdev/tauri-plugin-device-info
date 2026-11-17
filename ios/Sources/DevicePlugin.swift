@@ -34,7 +34,8 @@ class DeviceInfoPlugin: Plugin {
         let device = UIDevice.current
         device.isBatteryMonitoringEnabled = true
         
-        let level = device.batteryLevel * 100.0
+        // batteryLevel is -1 when unknown (always on the Simulator).
+        let level: Float? = device.batteryLevel >= 0 ? device.batteryLevel * 100.0 : nil
         let isCharging = device.batteryState == .charging || device.batteryState == .full
         
         // iOS public API is limited. We can derive a bit more context:
@@ -53,11 +54,15 @@ class DeviceInfoPlugin: Plugin {
             health = "Unknown"
         } 
         
-        invoke.resolve([
-            "level": level >= 0 ? level : 0, // batteryLevel is -1 if unknown
+        var result: [String: Any] = [
             "isCharging": isCharging,
             "health": health
-        ])
+        ]
+        // Omit an unknown level rather than reporting 0% (which reads as empty).
+        if let level = level {
+            result["level"] = level
+        }
+        invoke.resolve(result)
     }
     
     @objc public func get_network_info(_ invoke: Invoke) throws {
@@ -131,6 +136,59 @@ class DeviceInfoPlugin: Plugin {
         ])
     }
     
+    @objc public func get_power_state(_ invoke: Invoke) throws {
+        let info = ProcessInfo.processInfo
+
+        var thermal: String?
+        switch info.thermalState {
+        case .nominal: thermal = "nominal"
+        case .fair: thermal = "fair"
+        case .serious: thermal = "serious"
+        case .critical: thermal = "critical"
+        @unknown default: thermal = nil
+        }
+
+        // Plugged in (charging or full) vs. unplugged; unknown → omitted.
+        let device = UIDevice.current
+        device.isBatteryMonitoringEnabled = true
+        var onExternalPower: Bool?
+        switch device.batteryState {
+        case .charging, .full: onExternalPower = true
+        case .unplugged: onExternalPower = false
+        case .unknown: onExternalPower = nil
+        @unknown default: onExternalPower = nil
+        }
+
+        var result: [String: Any] = [
+            "lowPowerMode": info.isLowPowerModeEnabled
+        ]
+        if let thermal = thermal {
+            result["thermalState"] = thermal
+        }
+        if let onExternalPower = onExternalPower {
+            result["onExternalPower"] = onExternalPower
+        }
+        invoke.resolve(result)
+    }
+
+    @objc public func get_hardware_info(_ invoke: Invoke) throws {
+        let info = ProcessInfo.processInfo
+
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let modelCode = withUnsafePointer(to: &systemInfo.machine) {
+            $0.withMemoryRebound(to: CChar.self, capacity: 1) { String(validatingUTF8: $0) }
+        }
+
+        // iOS exposes no CPU clock speed; the tier is scored from memory and cores.
+        invoke.resolve([
+            "cpuCores": info.processorCount,
+            "cpuModel": modelCode,
+            "totalMemory": info.physicalMemory,
+            "isMobile": true
+        ])
+    }
+
     // Helper to try and get user-assigned device name
     private func getDeviceName() -> String {
         let deviceName = UIDevice.current.name
@@ -241,7 +299,10 @@ class KeychainHelper {
     }
 }
 
+// Must be `public`: Rust links against this symbol, and since Swift 6.4 (Xcode 27)
+// release builds hide `internal` symbols when merging the package's objects,
+// which fails the link with "Undefined symbols: _init_plugin_device_info".
 @_cdecl("init_plugin_device_info")
-func initPlugin() -> Plugin {
+public func initPlugin() -> Plugin {
     return DeviceInfoPlugin()
 }

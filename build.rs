@@ -4,6 +4,8 @@ const COMMANDS: &[&str] = &[
     "get_network_info",
     "get_storage_info",
     "get_display_info",
+    "get_power_profile",
+    "get_device_tier",
     "start_watching",
     "stop_watching",
 ];

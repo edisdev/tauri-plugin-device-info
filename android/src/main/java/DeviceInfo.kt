@@ -54,14 +54,23 @@ class DeviceInfo(private val activity: Activity) : Plugin(activity) {
       val batteryManager =
               activity.getSystemService(android.content.Context.BATTERY_SERVICE) as
                       android.os.BatteryManager
-      val level =
-              batteryManager
-                      .getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
-                      .toFloat()
-
       // Use Intent-based approach for reliable charging check on all Android versions
       val ifilter = android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
       val batteryStatus = activity.registerReceiver(null, ifilter)
+
+      // BATTERY_PROPERTY_CAPACITY is Integer.MIN_VALUE (or 0) when the device
+      // doesn't support it; fall back to the sticky intent's level/scale, and
+      // report no level at all rather than a bogus one.
+      val capacity =
+              batteryManager.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+      val level: Float? =
+              if (capacity in 1..100) {
+                capacity.toFloat()
+              } else {
+                val raw = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                val scale = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+                if (raw >= 0 && scale > 0) raw * 100f / scale else null
+              }
 
       val status = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
       val isChargingBool =
@@ -88,7 +97,7 @@ class DeviceInfo(private val activity: Activity) : Plugin(activity) {
               }
 
       val jsObject = JSObject()
-      jsObject.put("level", level)
+      if (level != null) jsObject.put("level", level.toDouble())
       jsObject.put("isCharging", isChargingBool)
       jsObject.put("health", healthString)
 
@@ -177,5 +186,96 @@ class DeviceInfo(private val activity: Activity) : Plugin(activity) {
     } catch (e: Exception) {
       invoke.reject("Failed to get display info: ${e.message}")
     }
+  }
+  @Command
+  fun get_power_state(invoke: Invoke) {
+    try {
+      val powerManager =
+              activity.getSystemService(android.content.Context.POWER_SERVICE) as
+                      android.os.PowerManager
+
+      val jsObject = JSObject()
+      jsObject.put("lowPowerMode", powerManager.isPowerSaveMode)
+
+      // Plugged into AC / USB / wireless, even when not charging (full or held
+      // at a charge limit). Omitted if the sticky battery intent is unavailable.
+      val batteryStatus =
+              activity.registerReceiver(
+                      null,
+                      android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
+              )
+      if (batteryStatus != null) {
+        val plugged = batteryStatus.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0)
+        jsObject.put("onExternalPower", plugged != 0)
+      }
+
+      // Thermal status exists from Android 10 (API 29); map Android's 7 levels
+      // onto the plugin's 4-level (Apple) scale.
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val thermal =
+                when (powerManager.currentThermalStatus) {
+                  android.os.PowerManager.THERMAL_STATUS_NONE -> "nominal"
+                  android.os.PowerManager.THERMAL_STATUS_LIGHT,
+                  android.os.PowerManager.THERMAL_STATUS_MODERATE -> "fair"
+                  android.os.PowerManager.THERMAL_STATUS_SEVERE -> "serious"
+                  android.os.PowerManager.THERMAL_STATUS_CRITICAL,
+                  android.os.PowerManager.THERMAL_STATUS_EMERGENCY,
+                  android.os.PowerManager.THERMAL_STATUS_SHUTDOWN -> "critical"
+                  else -> null
+                }
+        if (thermal != null) jsObject.put("thermalState", thermal)
+      }
+
+      invoke.resolve(jsObject)
+    } catch (e: Exception) {
+      invoke.reject("Failed to get power state: ${e.message}")
+    }
+  }
+
+  @Command
+  fun get_hardware_info(invoke: Invoke) {
+    try {
+      val activityManager =
+              activity.getSystemService(android.content.Context.ACTIVITY_SERVICE) as
+                      android.app.ActivityManager
+      val memoryInfo = android.app.ActivityManager.MemoryInfo()
+      activityManager.getMemoryInfo(memoryInfo)
+
+      val jsObject = JSObject()
+      jsObject.put("cpuCores", Runtime.getRuntime().availableProcessors())
+      jsObject.put("totalMemory", memoryInfo.totalMem)
+      jsObject.put("isMobile", true)
+      jsObject.put("isLowRamDevice", activityManager.isLowRamDevice)
+
+      val maxMhz = readCpuMaxFrequencyMhz()
+      if (maxMhz != null) jsObject.put("cpuMaxFrequencyMhz", maxMhz)
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        jsObject.put("cpuModel", Build.SOC_MODEL.takeUnless { it == Build.UNKNOWN } ?: Build.HARDWARE)
+        // 0 means the device declares no media performance class.
+        val mpc = Build.VERSION.MEDIA_PERFORMANCE_CLASS
+        if (mpc > 0) jsObject.put("mediaPerformanceClass", mpc)
+      } else {
+        jsObject.put("cpuModel", Build.HARDWARE)
+      }
+
+      invoke.resolve(jsObject)
+    } catch (e: Exception) {
+      invoke.reject("Failed to get hardware info: ${e.message}")
+    }
+  }
+
+  /** Highest `cpuinfo_max_freq` across cores in MHz (big.LITTLE: the prime core), or null. */
+  private fun readCpuMaxFrequencyMhz(): Long? {
+    val cpus = java.io.File("/sys/devices/system/cpu").listFiles { f -> f.name.matches(Regex("cpu\\d+")) }
+            ?: return null
+    return cpus.mapNotNull { cpu ->
+              try {
+                java.io.File(cpu, "cpufreq/cpuinfo_max_freq").readText().trim().toLong() / 1000
+              } catch (e: Exception) {
+                null
+              }
+            }
+            .maxOrNull()
   }
 }

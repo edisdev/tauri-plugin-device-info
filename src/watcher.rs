@@ -17,9 +17,17 @@
 //!
 //! Subscribers are reference-counted: the monitor for a kind starts on the
 //! first subscriber and is torn down once the last one unsubscribes.
+//!
+//! ## Initial value
+//!
+//! Monitors only emit on *change*. The current value is instead returned by
+//! [`start`] to the subscribing caller alone, so a late subscriber still gets
+//! it and existing subscribers don't see a duplicate. It is the monitor's
+//! [`LastValue`], read under its lock, so it can never be older than something
+//! the monitor already emitted.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
@@ -29,7 +37,9 @@ mod native;
 mod polling;
 
 /// The kinds of device information that can be watched.
-pub(crate) const WATCH_KINDS: &[&str] = &["battery", "network", "storage", "display", "device"];
+pub(crate) const WATCH_KINDS: &[&str] = &[
+    "battery", "network", "storage", "display", "device", "power",
+];
 
 /// A running change-event source for one kind.
 ///
@@ -39,10 +49,23 @@ pub(crate) trait MonitorHandle: Send {
     fn stop(self: Box<Self>);
 }
 
+/// The last value a monitor emitted (or was seeded with), shared between the
+/// monitor and [`start`].
+///
+/// Monitors hold the lock across their read-compare-emit, so a value read under
+/// it is ordered against every emit.
+pub(crate) type LastValue = Arc<Mutex<Option<serde_json::Value>>>;
+
+/// Locks a [`LastValue`], recovering from poisoning (the value is plain data).
+pub(crate) fn lock_last(last: &LastValue) -> MutexGuard<'_, Option<serde_json::Value>> {
+    last.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 /// One active monitor plus its subscriber count.
 struct Subscription {
     handle: Box<dyn MonitorHandle>,
     refs: usize,
+    last: LastValue,
 }
 
 /// Shared state holding at most one monitor per active watch kind.
@@ -71,6 +94,7 @@ pub(crate) fn read_snapshot<R: Runtime>(
         "storage" => serde_json::to_value(di.get_storage_info()?),
         "display" => serde_json::to_value(di.get_display_info()?),
         "device" => serde_json::to_value(di.get_device_info()?),
+        "power" => serde_json::to_value(di.get_power_profile()?),
         other => {
             return Err(crate::Error::DeviceInfo(format!(
                 "unknown watch kind: {other}"
@@ -100,7 +124,11 @@ pub(crate) fn emit_if_changed<R: Runtime>(
     }
 }
 
-/// Subscribes to a watch `kind`, starting a monitor if one isn't already running.
+/// Subscribes to a watch `kind`, starting a monitor if one isn't already running,
+/// and returns the current value for the caller (`None` if it can't be read).
+///
+/// The value is returned rather than emitted so only the new subscriber gets
+/// it: monitors emit only on change, and existing subscribers already have it.
 ///
 /// A native event-driven monitor is preferred; if the platform has none for this
 /// kind, a change-detecting poller is used (`interval_ms` applies only then, and
@@ -109,7 +137,7 @@ pub(crate) fn start<R: Runtime>(
     app: &AppHandle<R>,
     kind: &str,
     interval_ms: Option<u64>,
-) -> crate::Result<()> {
+) -> crate::Result<Option<serde_json::Value>> {
     if !WATCH_KINDS.contains(&kind) {
         return Err(crate::Error::DeviceInfo(format!(
             "unknown watch kind: {kind}"
@@ -119,20 +147,49 @@ pub(crate) fn start<R: Runtime>(
     let state = app.state::<WatcherState>();
     let mut subs = state.subs.lock().map_err(poisoned)?;
 
-    // A monitor is already running for this kind: just add a subscriber.
+    // A monitor is already running for this kind: add a subscriber and hand it
+    // the monitor's last value.
     if let Some(sub) = subs.get_mut(kind) {
         sub.refs += 1;
-        return Ok(());
+        let last = sub.last.clone();
+        drop(subs); // don't hold the subs lock while (possibly) reading below
+
+        let last = lock_last(&last);
+        if let Some(value) = last.as_ref() {
+            return Ok(Some(value.clone()));
+        }
+        // The monitor has no value yet (its reads failed so far). Read one now,
+        // still under its lock so it can't race an emit. It is deliberately not
+        // stored: existing subscribers have nothing yet, and the monitor's next
+        // successful read must still be emitted to them.
+        return Ok(read_snapshot(app, kind).ok());
     }
 
-    // Prefer a native event-driven monitor; fall back to the poller.
-    let handle = match native::try_spawn(app, kind)? {
-        Some(handle) => handle,
-        None => polling::spawn(app, kind, interval_ms),
-    };
+    // First subscriber. Hold the new monitor's `last` lock until it is seeded
+    // with the value returned to the caller, so the monitor's first comparison
+    // is against it: unchanged values aren't re-emitted, and any change after
+    // this read is.
+    let last: LastValue = Arc::new(Mutex::new(None));
+    let mut seed = lock_last(&last);
 
-    subs.insert(kind.to_string(), Subscription { handle, refs: 1 });
-    Ok(())
+    // Prefer a native event-driven monitor; fall back to the poller.
+    let handle = match native::try_spawn(app, kind, last.clone())? {
+        Some(handle) => handle,
+        None => polling::spawn(app, kind, interval_ms, last.clone()),
+    };
+    subs.insert(
+        kind.to_string(),
+        Subscription {
+            handle,
+            refs: 1,
+            last: last.clone(),
+        },
+    );
+    drop(subs); // the read below can be slow; don't block other kinds
+
+    let snapshot = read_snapshot(app, kind).ok();
+    *seed = snapshot.clone();
+    Ok(snapshot)
 }
 
 /// Unsubscribes from a watch `kind`, stopping the monitor once the last subscriber leaves.
@@ -180,7 +237,9 @@ mod tests {
 
     #[test]
     fn watch_kinds_cover_all_getters() {
-        for kind in ["battery", "network", "storage", "display", "device"] {
+        for kind in [
+            "battery", "network", "storage", "display", "device", "power",
+        ] {
             assert!(WATCH_KINDS.contains(&kind), "missing watch kind: {kind}");
         }
     }
@@ -220,6 +279,90 @@ mod tests {
         stop(app.handle(), "battery").unwrap(); // last subscriber → tears down
                                                 // Extra stop on an already-removed kind must be a no-op, not a panic.
         stop(app.handle(), "battery").unwrap();
+    }
+
+    /// Counts `kind` change events delivered to any listener.
+    #[cfg(not(target_os = "windows"))]
+    fn count_events(
+        app: &tauri::App<tauri::test::MockRuntime>,
+        kind: &str,
+    ) -> std::sync::Arc<std::sync::atomic::AtomicUsize> {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use tauri::Listener;
+
+        let received = std::sync::Arc::new(AtomicUsize::new(0));
+        let counter = received.clone();
+        app.handle().listen_any(event_name(kind), move |_| {
+            counter.fetch_add(1, Ordering::SeqCst);
+        });
+        received
+    }
+
+    /// A second subscriber to a kind that is already being watched (e.g. the
+    /// same page after a webview reload) must still get the current value,
+    /// even though the running monitor only emits on change.
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn late_subscriber_receives_current_value() {
+        let app = mock_app();
+
+        let first = start(app.handle(), "storage", None).unwrap();
+        assert!(first.is_some(), "first subscriber got no initial value");
+
+        let second = start(app.handle(), "storage", None).unwrap();
+        assert!(second.is_some(), "late subscriber got no current value");
+        // It is the value the monitor holds, not a fresh (possibly reordered) read.
+        assert_eq!(second, first);
+
+        stop(app.handle(), "storage").unwrap();
+        stop(app.handle(), "storage").unwrap();
+    }
+
+    /// The initial value goes only to the subscribing caller: neither the first
+    /// subscriber (via a monitor emit on top of the returned value) nor existing
+    /// subscribers (when someone else subscribes) get a duplicate event.
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn subscribing_does_not_emit_duplicates() {
+        use std::sync::atomic::Ordering;
+
+        let app = mock_app();
+        // `storage` polls every 10 s by default, so no tick happens during the
+        // test, and `display` is native on macOS; both only emit on change.
+        for kind in ["storage", "display"] {
+            let received = count_events(&app, kind);
+
+            start(app.handle(), kind, None).unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            start(app.handle(), kind, None).unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(300));
+
+            assert_eq!(
+                received.load(Ordering::SeqCst),
+                0,
+                "{kind}: an unchanged value was emitted"
+            );
+
+            stop(app.handle(), kind).unwrap();
+            stop(app.handle(), kind).unwrap();
+        }
+    }
+
+    /// The adaptive getters read real OS signals on the host; they must not
+    /// error and must produce in-range values.
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn adaptive_getters_work_on_host() {
+        let app = mock_app();
+        let di = app.handle().device_info();
+
+        let profile = di.get_power_profile().unwrap();
+        println!("power profile: {profile:?}");
+
+        let tier = di.get_device_tier().unwrap();
+        println!("device tier: {tier:?}");
+        assert!(tier.score <= 100);
+        assert!(!tier.hardware.is_mobile);
     }
 
     #[cfg(not(target_os = "windows"))]

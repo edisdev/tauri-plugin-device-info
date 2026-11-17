@@ -1,10 +1,26 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
-import type { DeviceInfoResponse, BatteryInfo, NetworkInfo, StorageInfo, DisplayInfo, WatchOptions, UnwatchFn } from './type'
+import type { DeviceInfoResponse, BatteryInfo, NetworkInfo, StorageInfo, DisplayInfo, PowerProfile, DeviceTier, WatchOptions, UnwatchFn } from './type'
 
 // Re-export types for consumers
-export type { DeviceInfoResponse, DeviceInfoResponse as DeviceInfo, BatteryInfo, NetworkInfo, StorageInfo, DisplayInfo, WatchOptions, UnwatchFn } from './type'
+export type {
+  DeviceInfoResponse,
+  DeviceInfoResponse as DeviceInfo,
+  BatteryInfo,
+  NetworkInfo,
+  StorageInfo,
+  DisplayInfo,
+  ThermalState,
+  PowerProfile,
+  PowerProfileKind,
+  PowerProfileReason,
+  HardwareInfo,
+  DeviceTier,
+  DeviceTierKind,
+  WatchOptions,
+  UnwatchFn
+} from './type'
 
 /**
  * Get comprehensive device information including UUID, manufacturer, model, etc.
@@ -42,10 +58,38 @@ export async function getDisplayInfo(): Promise<DisplayInfo> {
 }
 
 // ============================================================================
+// Adaptive signals
+// ============================================================================
+
+/**
+ * Get a single `full | balanced | saver` recommendation that combines battery
+ * level, charging state, OS power-saving mode and thermal pressure.
+ *
+ * @example
+ * const { profile } = await getPowerProfile()
+ * if (profile === 'saver') disableBackgroundSync()
+ */
+export async function getPowerProfile(): Promise<PowerProfile> {
+  return await invoke<PowerProfile>('plugin:device-info|get_power_profile')
+}
+
+/**
+ * Classify the device as `low | mid | high` from its CPU and memory, scored
+ * against devices of the same form factor (desktop vs. mobile).
+ *
+ * @example
+ * const { tier } = await getDeviceTier()
+ * document.body.dataset.tier = tier // style with [data-tier="low"] { ... }
+ */
+export async function getDeviceTier(): Promise<DeviceTier> {
+  return await invoke<DeviceTier>('plugin:device-info|get_device_tier')
+}
+
+// ============================================================================
 // Reactive watch API
 // ============================================================================
 
-type WatchKind = 'battery' | 'network' | 'storage' | 'display' | 'device'
+type WatchKind = 'battery' | 'network' | 'storage' | 'display' | 'device' | 'power'
 
 /**
  * Subscribes to a device-info kind and invokes `callback` whenever the value changes.
@@ -57,16 +101,31 @@ async function watch<T>(
   callback: (value: T) => void,
   options?: WatchOptions
 ): Promise<UnwatchFn> {
+  // Listen before starting so no change emitted after the start is missed.
+  let changed = false
   const unlisten = await listen<T>(`device-info://${kind}-changed`, (event) => {
+    changed = true
     callback(event.payload)
   })
 
+  let current: T | null
   try {
-    await invoke('plugin:device-info|start_watching', { kind, intervalMs: options?.intervalMs })
+    // Returns the current value for this subscriber only; the backend emits
+    // events only on change, so other subscribers don't get a duplicate.
+    current = await invoke<T | null>('plugin:device-info|start_watching', {
+      kind,
+      intervalMs: options?.intervalMs
+    })
   } catch (error) {
     // Don't leak the event listener if the backend failed to start the watcher.
     unlisten()
     throw error
+  }
+
+  // A change event that already arrived is at least as new as `current`;
+  // delivering `current` after it would roll the caller back to a stale value.
+  if (current !== null && current !== undefined && !changed) {
+    callback(current)
   }
 
   return async () => {
@@ -98,4 +157,17 @@ export function watchDisplay(callback: (info: DisplayInfo) => void, options?: Wa
 /** Watch device identity fields for changes (rarely changes; useful on mobile). */
 export function watchDevice(callback: (info: DeviceInfoResponse) => void, options?: WatchOptions): Promise<UnwatchFn> {
   return watch<DeviceInfoResponse>('device', callback, options)
+}
+
+/**
+ * Watch the power profile — fires when the profile, any reason, or the
+ * underlying battery/thermal/low-power readings change.
+ *
+ * @example
+ * const unwatch = await watchPowerProfile(({ profile }) => {
+ *   animations.enabled = profile === 'full'
+ * })
+ */
+export function watchPowerProfile(callback: (profile: PowerProfile) => void, options?: WatchOptions): Promise<UnwatchFn> {
+  return watch<PowerProfile>('power', callback, options)
 }

@@ -25,6 +25,10 @@ mod macos;
 #[cfg(target_os = "linux")]
 mod linux;
 
+// Pure sysfs rules used by `linux`; also compiled for tests on every host.
+#[cfg(any(test, target_os = "linux"))]
+mod sysfs;
+
 // ============================================================================
 // Plugin initialization
 // ============================================================================
@@ -35,6 +39,9 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 ) -> crate::Result<DeviceInfo<R>> {
     Ok(DeviceInfo(app.clone()))
 }
+
+/// CPU clocks below this are sensor/unit errors, not real readings.
+const MIN_PLAUSIBLE_CPU_MHZ: u64 = 200;
 
 /// Access to the device-info APIs.
 pub struct DeviceInfo<R: Runtime>(AppHandle<R>);
@@ -72,25 +79,43 @@ impl<R: Runtime> DeviceInfo<R> {
 
         #[cfg(not(target_os = "macos"))]
         {
-            let manager =
-                battery::Manager::new().map_err(|e| crate::Error::DeviceInfo(e.to_string()))?;
-            if let Some(Ok(battery)) = manager
-                .batteries()
-                .map_err(|e| crate::Error::DeviceInfo(e.to_string()))?
-                .next()
-            {
-                let level = (battery.state_of_charge().value * 100.0).round();
-                let is_charging = battery.state() == battery::State::Charging;
-                let health = format!("{:?}", battery.state_of_health().value * 100.0);
-
-                Ok(BatteryInfo {
-                    level: Some(level),
-                    is_charging: Some(is_charging),
-                    health: Some(health),
-                })
-            } else {
-                Ok(BatteryInfo::default())
+            // `battery::Manager` is `!Send` (it holds an `Rc`), so cache one per
+            // thread: the watch pollers call this every few seconds.
+            thread_local! {
+                static MANAGER: std::cell::RefCell<Option<battery::Manager>> =
+                    const { std::cell::RefCell::new(None) };
             }
+
+            MANAGER.with(|cell| {
+                let mut cached = cell.borrow_mut();
+                if cached.is_none() {
+                    // A failure is not cached, so the next call retries.
+                    *cached = Some(
+                        battery::Manager::new()
+                            .map_err(|e| crate::Error::DeviceInfo(e.to_string()))?,
+                    );
+                }
+                let Some(manager) = cached.as_ref() else {
+                    return Ok(BatteryInfo::default());
+                };
+                if let Some(Ok(battery)) = manager
+                    .batteries()
+                    .map_err(|e| crate::Error::DeviceInfo(e.to_string()))?
+                    .next()
+                {
+                    let level = (battery.state_of_charge().value * 100.0).round();
+                    let is_charging = battery.state() == battery::State::Charging;
+                    let health = format!("{:?}", battery.state_of_health().value * 100.0);
+
+                    Ok(BatteryInfo {
+                        level: Some(level),
+                        is_charging: Some(is_charging),
+                        health: Some(health),
+                    })
+                } else {
+                    Ok(BatteryInfo::default())
+                }
+            })
         }
     }
 
@@ -226,5 +251,63 @@ impl<R: Runtime> DeviceInfo<R> {
             }
         }
         Ok(DisplayInfo::default())
+    }
+    /// Reads the OS power-saving mode and thermal state.
+    ///
+    /// # Platform-specific behavior
+    /// - **macOS**: `NSProcessInfo` (`isLowPowerModeEnabled` needs macOS 12+)
+    /// - **Windows**: Battery/Energy Saver via `GetSystemPowerStatus`; no thermal state
+    /// - **Linux**: ACPI platform profile and `/sys/class/thermal` zones
+    pub fn get_power_state(&self) -> crate::Result<PowerState> {
+        #[cfg(target_os = "macos")]
+        return Ok(macos::get_power_state());
+
+        #[cfg(target_os = "windows")]
+        return Ok(windows::get_power_state());
+
+        #[cfg(target_os = "linux")]
+        return Ok(linux::get_power_state());
+
+        #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+        return Ok(PowerState::default());
+    }
+
+    /// Reads CPU and memory capability signals.
+    pub fn get_hardware_info(&self) -> crate::Result<HardwareInfo> {
+        use sysinfo::{CpuRefreshKind, RefreshKind, System};
+
+        let sys = System::new_with_specifics(
+            RefreshKind::nothing()
+                .with_memory(sysinfo::MemoryRefreshKind::nothing().with_ram())
+                .with_cpu(CpuRefreshKind::nothing().with_frequency()),
+        );
+
+        let cpus = sys.cpus();
+        // sysinfo reports nonsense on some CPUs (e.g. `4` on Apple Silicon), so
+        // anything below a plausible clock is treated as unknown.
+        let sysinfo_mhz = cpus
+            .iter()
+            .map(|c| c.frequency())
+            .max()
+            .filter(|f| *f >= MIN_PLAUSIBLE_CPU_MHZ);
+
+        #[cfg(target_os = "linux")]
+        let cpu_max_frequency_mhz = linux::get_cpu_max_frequency_mhz().or(sysinfo_mhz);
+        #[cfg(not(target_os = "linux"))]
+        let cpu_max_frequency_mhz = sysinfo_mhz;
+
+        Ok(HardwareInfo {
+            cpu_cores: (!cpus.is_empty()).then_some(cpus.len() as u32),
+            physical_cores: System::physical_core_count().map(|c| c as u32),
+            cpu_model: cpus
+                .first()
+                .map(|c| c.brand().trim().to_string())
+                .filter(|b| !b.is_empty()),
+            cpu_max_frequency_mhz,
+            total_memory: Some(sys.total_memory()).filter(|m| *m > 0),
+            is_mobile: false,
+            is_low_ram_device: None,
+            media_performance_class: None,
+        })
     }
 }

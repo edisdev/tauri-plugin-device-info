@@ -9,6 +9,8 @@
 //! - **Network Info**: IP address, network type, MAC address
 //! - **Storage Info**: Total/free space, storage type
 //! - **Display Info**: Resolution, scale factor, refresh rate
+//! - **Power Profile**: One `full | balanced | saver` signal from battery, Low Power Mode and thermal state
+//! - **Device Tier**: `low | mid | high` hardware capability class
 //!
 //! ## Supported Platforms
 //!
@@ -58,6 +60,7 @@ mod desktop;
 #[cfg(mobile)]
 mod mobile;
 
+pub mod adaptive;
 mod commands;
 mod error;
 mod models;
@@ -90,6 +93,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::get_network_info,
             commands::get_storage_info,
             commands::get_display_info,
+            commands::get_power_profile,
+            commands::get_device_tier,
             commands::start_watching,
             commands::stop_watching
         ])

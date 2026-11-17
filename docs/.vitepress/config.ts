@@ -46,7 +46,8 @@ export default defineConfig({
                         { text: 'Network Info', link: '/api/network-info' },
                         { text: 'Storage Info', link: '/api/storage-info' },
                         { text: 'Display Info', link: '/api/display-info' },
-                        { text: 'Reactive Watch', link: '/api/watch' }
+                        { text: 'Reactive Watch', link: '/api/watch' },
+                        { text: 'Adaptive Apps', link: '/api/adaptive' }
                     ]
                 },
                 {

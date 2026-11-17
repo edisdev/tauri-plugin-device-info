@@ -9,6 +9,8 @@ Default permissions for the plugin
 - `allow-get-network-info`
 - `allow-get-storage-info`
 - `allow-get-display-info`
+- `allow-get-power-profile`
+- `allow-get-device-tier`
 - `allow-start-watching`
 - `allow-stop-watching`
 
@@ -76,6 +78,32 @@ Denies the get_device_info command without any pre-configured scope.
 <tr>
 <td>
 
+`device-info:allow-get-device-tier`
+
+</td>
+<td>
+
+Enables the get_device_tier command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`device-info:deny-get-device-tier`
+
+</td>
+<td>
+
+Denies the get_device_tier command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `device-info:allow-get-display-info`
 
 </td>
@@ -121,6 +149,32 @@ Enables the get_network_info command without any pre-configured scope.
 <td>
 
 Denies the get_network_info command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`device-info:allow-get-power-profile`
+
+</td>
+<td>
+
+Enables the get_power_profile command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`device-info:deny-get-power-profile`
+
+</td>
+<td>
+
+Denies the get_power_profile command without any pre-configured scope.
 
 </td>
 </tr>
