@@ -1,10 +1,293 @@
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  font-weight: 400;
+/*
+ * Three themes — Dark (default, true black + vivid colors), Light (warm sand) and Colorful (deep purple) —
+ * as design tokens on <html data-theme>. Components only use these variables.
+ * Status colors (good / warn / bad) keep their meaning in every theme; only
+ * their tones change so they stay readable on each background.
+ */
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #000000;
+  --surface: #0b0b0d;
+  --surface-2: #000000;
+  --surface-glass: rgba(11, 11, 13, 0.88);
+  --sunken: #000000;
+  --border: rgba(255, 255, 255, 0.12);
+  --divider: rgba(255, 255, 255, 0.08);
+  --shadow: none;
+
+  --text: #ffffff;
+  --text-2: #e5e5ea;
+  --body: #d1d1d6;
+  --soft: #bcbcc6;
+  --muted: #98989f;
+  --faint: #8e8e93;
+
+  --accent: #5e5ce6;
+  --on-accent: #ffffff;
+  --accent-soft: #9e9cff;
+  --accent-line: #7d7aff;
+  --accent-tint: rgba(125, 122, 255, 0.14);
+  --accent-bg: rgba(94, 92, 230, 0.28);
+  --accent-tag: #c9c8ff;
+  --glow: rgba(94, 92, 230, 0.12);
+
+  --nav-active: rgba(94, 92, 230, 0.28);
+  --nav-active-text: #ffffff;
+  --hover: rgba(255, 255, 255, 0.05);
+  --chip-bg: rgba(255, 255, 255, 0.06);
+  --track: rgba(255, 255, 255, 0.12);
+  --track-strong: rgba(255, 255, 255, 0.3);
+
+  --good: #30d158;
+  --warn: #ffd60a;
+  --bad: #ff453a;
+  --orange: #ff9f0a;
+  --good-strong: #30d158;
+  --good-text: #a6f5bc;
+  --good-bg: rgba(48, 209, 88, 0.16);
+  --good-border: rgba(48, 209, 88, 0.45);
+  --warn-text: #ffe680;
+  --bad-text: #ffb3ad;
+  --bad-bg: rgba(255, 69, 58, 0.16);
+  --bad-border: rgba(255, 69, 58, 0.45);
+  --on-warn: #1a1a1a;
+
+  --code-bg: #050506;
+  --code-text: #e5e5ea;
+  --toast-bg: rgba(0, 0, 0, 0.95);
+
+  --badge-power: #a6f5bc;
+  --badge-power-bg: rgba(48, 209, 88, 0.18);
+  --badge-battery: #ffe680;
+  --badge-battery-bg: rgba(255, 214, 10, 0.18);
+  --badge-display: #c9c8ff;
+  --badge-display-bg: rgba(94, 92, 230, 0.3);
+  --badge-network: #9ff0ff;
+  --badge-network-bg: rgba(100, 210, 255, 0.18);
+  --badge-storage: #e4c8ff;
+  --badge-storage-bg: rgba(191, 90, 242, 0.22);
+
+  --net-wifi: #64d2ff;
+  --net-ethernet: #0a84ff;
+  --net-cellular: #bf5af2;
+  --net-icon: #64d2ff;
+  --net-icon-bg: rgba(100, 210, 255, 0.16);
+
+  --device-lid: #1c1c1e;
+  --device-edge: #3a3a3f;
+  --device-screen: #000000;
+  --device-base: #2c2c2e;
+
+  /* Per-reading cards: neutral here, each with its own hue in Colorful. */
+  --hero-power-bg: var(--surface);
+  --hero-tier-bg: var(--surface);
+  --tile-battery-bg: var(--surface);
+  --tile-battery-border: var(--border);
+  --tile-battery-label: var(--muted);
+  --tile-battery-accent: var(--good);
+  --tile-network-bg: var(--surface);
+  --tile-network-border: var(--border);
+  --tile-network-label: var(--muted);
+  --tile-network-accent: var(--accent-line);
+  --tile-storage-bg: var(--surface);
+  --tile-storage-border: var(--border);
+  --tile-storage-label: var(--muted);
+  --tile-storage-accent: #bf5af2;
+  --tile-display-bg: var(--surface);
+  --tile-display-border: var(--border);
+  --tile-display-label: var(--muted);
+  --tile-display-accent: var(--accent-line);
+
+  /* Adaptive background scene (full profile). */
+  --scene-1: #5e5ce6;
+  --scene-2: #7d7aff;
+  --scene-3: #9e9cff;
+  --scene-4: #bf5af2;
+  --scene-link: 125, 122, 255;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f3ebe0;
+  --surface: #fffcf7;
+  --surface-2: #faf5ee;
+  --surface-glass: rgba(255, 252, 247, 0.9);
+  --sunken: rgba(92, 60, 30, 0.06);
+  --border: rgba(92, 60, 30, 0.12);
+  --divider: rgba(92, 60, 30, 0.09);
+  --shadow: 0 1px 2px rgba(92, 60, 30, 0.07), 0 4px 16px rgba(92, 60, 30, 0.05);
+
+  --text: #2b2017;
+  --text-2: #3a2c20;
+  --body: #4a3a2c;
+  --soft: #5c4a3a;
+  --muted: #76604d;
+  --faint: #7d6855;
+
+  --accent: #a0612b;
+  --on-accent: #ffffff;
+  --accent-soft: #8a4f1f;
+  --accent-line: #b8743a;
+  --accent-tint: rgba(160, 97, 43, 0.1);
+  --accent-bg: rgba(160, 97, 43, 0.13);
+  --accent-tag: #8a4f1f;
+  --glow: rgba(160, 97, 43, 0.08);
+
+  --nav-active: rgba(160, 97, 43, 0.13);
+  --nav-active-text: #6f3d15;
+  --hover: rgba(92, 60, 30, 0.05);
+  --chip-bg: rgba(92, 60, 30, 0.05);
+  --track: rgba(92, 60, 30, 0.1);
+  --track-strong: rgba(92, 60, 30, 0.25);
+
+  --good: #22c55e;
+  --warn: #eab308;
+  --bad: #ef4444;
+  --orange: #f97316;
+  --good-strong: #15803d;
+  --good-text: #166534;
+  --good-bg: rgba(34, 197, 94, 0.12);
+  --good-border: rgba(22, 163, 74, 0.3);
+  --warn-text: #854d0e;
+  --bad-text: #991b1b;
+  --bad-bg: rgba(239, 68, 68, 0.1);
+  --bad-border: rgba(220, 38, 38, 0.3);
+  --on-warn: #1a1a1a;
+
+  --code-bg: #2b2017;
+  --code-text: #f3ebe0;
+  --toast-bg: rgba(255, 252, 247, 0.97);
+
+  --badge-power: #166534;
+  --badge-power-bg: #dcfce7;
+  --badge-battery: #854d0e;
+  --badge-battery-bg: #fef3c7;
+  --badge-display: #6f3d15;
+  --badge-display-bg: #f3e1cc;
+  --badge-network: #155e75;
+  --badge-network-bg: #d5f3f6;
+  --badge-storage: #6b21a8;
+  --badge-storage-bg: #efe3f7;
+
+  --net-wifi: #0891b2;
+  --net-ethernet: #155e75;
+  --net-cellular: #7c3aed;
+  --net-icon: #0e7490;
+  --net-icon-bg: rgba(8, 145, 178, 0.12);
+
+  --device-lid: #e8dccb;
+  --device-edge: #c9b59c;
+  --device-screen: #2b2017;
+  --device-base: #d9c8b1;
+
+  --tile-battery-accent: #22c55e;
+
+  --scene-1: #b8743a;
+  --scene-2: #d9a066;
+  --scene-3: #a0612b;
+  --scene-4: #e3b98a;
+  --scene-link: 160, 97, 43;
+}
+
+[data-theme="colorful"] {
+  color-scheme: dark;
+
+  --bg: #0d071c;
+  --surface: #1a0f36;
+  --surface-2: #120a26;
+  --surface-glass: rgba(26, 15, 54, 0.88);
+  --sunken: rgba(0, 0, 0, 0.25);
+  --border: rgba(255, 255, 255, 0.09);
+  --divider: rgba(255, 255, 255, 0.07);
+
+  --text: #ffffff;
+  --text-2: #ede9fe;
+  --body: #d6cff6;
+  --soft: #d6cff6;
+  --muted: #aba3d8;
+  --faint: #9d94cc;
+
+  --accent: #ec4899;
+  --accent-soft: #f9a8d4;
+  --accent-line: #f472b6;
+  --accent-tint: rgba(244, 114, 182, 0.15);
+  --accent-bg: rgba(236, 72, 153, 0.22);
+  --accent-tag: #fbcfe8;
+  --glow: rgba(236, 72, 153, 0.1);
+
+  --nav-active: rgba(236, 72, 153, 0.22);
+  --hover: rgba(255, 255, 255, 0.05);
+  --chip-bg: rgba(255, 255, 255, 0.06);
+  --track: rgba(255, 255, 255, 0.14);
+  --track-strong: rgba(255, 255, 255, 0.3);
+
+  --good: #34d399;
+  --warn: #fbbf24;
+  --bad: #fb7185;
+  --good-strong: #6ee7b7;
+  --good-text: #a7f3d0;
+  --good-bg: rgba(52, 211, 153, 0.16);
+  --good-border: rgba(52, 211, 153, 0.35);
+  --bad-text: #fecdd3;
+  --bad-bg: rgba(251, 113, 133, 0.16);
+  --bad-border: rgba(251, 113, 133, 0.35);
+
+  --code-bg: #0a0516;
+  --toast-bg: rgba(13, 7, 28, 0.96);
+
+  --badge-power: #a7f3d0;
+  --badge-power-bg: rgba(52, 211, 153, 0.2);
+  --badge-battery: #fde68a;
+  --badge-battery-bg: rgba(251, 191, 36, 0.2);
+  --badge-display: #fbcfe8;
+  --badge-display-bg: rgba(236, 72, 153, 0.25);
+  --badge-network: #a5f3fc;
+  --badge-network-bg: rgba(34, 211, 238, 0.2);
+  --badge-storage: #ddd6fe;
+  --badge-storage-bg: rgba(167, 139, 250, 0.25);
+
+  --device-lid: #2a1a52;
+  --device-edge: #5b3f9a;
+  --device-screen: #120a26;
+  --device-base: #3a2670;
+
+  --hero-power-bg: #10322b;
+  --hero-tier-bg: #241449;
+  --tile-battery-bg: #0e3329;
+  --tile-battery-border: rgba(52, 211, 153, 0.3);
+  --tile-battery-label: #6ee7b7;
+  --tile-battery-accent: #34d399;
+  --tile-network-bg: #0b2b3c;
+  --tile-network-border: rgba(34, 211, 238, 0.3);
+  --tile-network-label: #67e8f9;
+  --tile-network-accent: #22d3ee;
+  --tile-storage-bg: #251752;
+  --tile-storage-border: rgba(167, 139, 250, 0.35);
+  --tile-storage-label: #c4b5fd;
+  --tile-storage-accent: #a78bfa;
+  --tile-display-bg: #3d1436;
+  --tile-display-border: rgba(244, 114, 182, 0.35);
+  --tile-display-label: #f9a8d4;
+  --tile-display-accent: #f472b6;
+
+  --scene-1: #ec4899;
+  --scene-2: #a78bfa;
+  --scene-3: #22d3ee;
+  --scene-4: #f9a8d4;
+  --scene-link: 244, 114, 182;
+}
+
+:root {
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,89 +296,198 @@
   -webkit-text-size-adjust: 100%;
 }
 
-.container {
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
   margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
+  min-height: 100vh;
+  color: var(--text);
+  background: var(--bg);
+  transition: background 0.3s;
 }
 
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+  color: var(--accent-soft);
 }
 
-a:hover {
-  color: #535bf2;
+/* ---- Shared building blocks used by every page ---- */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-h1 {
-  text-align: center;
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+.page-header h1 {
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 700;
 }
 
-button {
-  cursor: pointer;
+.page-header p {
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+  color: var(--soft);
 }
 
-button:hover {
-  border-color: #396cd8;
+.card {
+  min-width: 0;
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
-input,
-button {
-  outline: none;
+.label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-#greet-input {
-  margin-right: 5px;
+.mono {
+  font-family: var(--mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
+.soft {
+  color: var(--soft);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.api-tag {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--accent-tag);
+}
+
+/* ---- Phones ---- */
+
+@media (max-width: 640px) {
+  .page {
+    gap: 12px;
   }
 
-  a:hover {
-    color: #24c8db;
+  .page-header h1 {
+    font-size: 1.875rem;
   }
 
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
+  .card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+}
+
+/*
+ * ---- Motion ----
+ * Motion explains a change: a value arriving, a state moving. Entrances use a
+ * soft spring; numbers count up (CountUp.svelte). Loops (.m-loop) are only for
+ * live state. Balanced halves every duration and stops loops; Saver and
+ * prefers-reduced-motion switch all of it off (rules below), and because every
+ * element's resting style is its final state, values then simply appear.
+ */
+
+:root {
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --m: 1; /* duration multiplier */
+}
+
+[data-power="balanced"] {
+  --m: 0.5;
+}
+
+[data-power="balanced"] .m-loop {
+  animation: none !important;
+}
+
+@keyframes v-card { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes v-fadeup { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes v-pop { 0% { opacity: 0; transform: scale(0.6); } 60% { opacity: 1; transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes v-rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes v-growx { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes v-draw { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
+@keyframes v-light { from { opacity: 0.12; } to { opacity: 1; } }
+@keyframes v-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes v-enter { 0% { opacity: 0; transform: translateY(-14px); background: var(--accent-bg); } 25% { opacity: 1; transform: none; } 100% { opacity: 1; background: transparent; } }
+@keyframes v-roll { 0% { opacity: 0; transform: translateY(-10px); color: var(--warn); } 45% { opacity: 1; transform: none; color: var(--warn); } 100% { opacity: 1; } }
+@keyframes v-drop { 0% { opacity: 0; transform: translate(-50%, -18px); } 70% { opacity: 1; transform: translate(-50%, 3px); } 100% { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes v-ripple { from { transform: translate(-50%, -50%) scale(0.05); opacity: 0.45; } to { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
+@keyframes v-poweron { 0% { filter: brightness(0.2); } 35% { filter: brightness(1.8); } 100% { filter: none; } }
+@keyframes v-pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes v-breathe { 0%, 100% { box-shadow: 0 0 0 transparent; } 50% { box-shadow: 0 0 14px color-mix(in srgb, var(--good) 85%, transparent); } }
+@keyframes v-glow { 0%, 100% { filter: drop-shadow(0 0 0 transparent); } 50% { filter: drop-shadow(0 0 9px color-mix(in srgb, var(--good) 85%, transparent)); } }
+
+/* Entrance helpers. --i = position in a stagger, --d = extra delay. */
+.m-card { animation: v-card calc(520ms * var(--m)) var(--spring) calc((80ms + var(--i, 0) * 60ms) * var(--m)) both; }
+.page-header { animation: v-fadeup calc(320ms * var(--m)) var(--ease-out) both; }
+.m-fadeup { animation: v-fadeup calc(360ms * var(--m)) var(--ease-out) calc((var(--d, 0ms) + var(--i, 0) * 70ms) * var(--m)) both; }
+.m-pop { animation: v-pop calc(420ms * var(--m)) var(--spring) calc((var(--d, 0ms) + var(--i, 0) * 60ms) * var(--m)) both; }
+.m-rise { transform-origin: bottom; animation: v-rise calc(420ms * var(--m)) var(--spring) calc((var(--d, 250ms) + var(--i, 0) * 60ms) * var(--m)) both; }
+.m-growx { transform-origin: left; animation: v-growx calc(560ms * var(--m)) var(--ease-out) calc((var(--d, 200ms) + var(--i, 0) * 120ms) * var(--m)) both; }
+.m-draw { animation: v-draw calc(1100ms * var(--m)) var(--ease-out) calc(var(--d, 250ms) * var(--m)) both; }
+.m-light { animation: v-light calc(220ms * var(--m)) var(--ease-out) calc((var(--d, 300ms) + var(--i, 0) * 120ms) * var(--m)) both; }
+.m-reveal { animation: v-reveal calc(800ms * var(--m)) var(--ease-out) calc(var(--d, 300ms) * var(--m)) both; }
+.m-enter { animation: v-enter calc(1900ms * var(--m)) var(--ease-out) both; }
+.m-roll { display: inline-block; animation: v-roll calc(700ms * var(--m)) var(--ease-out) both; }
+.m-drop { animation: v-drop calc(620ms * var(--m)) var(--spring) calc(var(--d, 900ms) * var(--m)) both; }
+.m-poweron { animation: v-poweron calc(900ms * var(--m)) var(--ease-out) calc(var(--d, 150ms) * var(--m)) both; }
+
+/* Loops — live state only. */
+.m-pulse { animation: v-pulse 2s ease-out infinite; }
+.m-breathe { animation: v-breathe 2.4s ease-in-out 900ms infinite; }
+.m-glow { animation: v-glow 1.6s ease-in-out infinite; }
+
+/* A dot with a pulsing halo: <span class="live-dot"><span class="m-pulse m-loop"></span></span> */
+.live-dot {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--good);
+}
+
+.live-dot > span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--good);
+}
+
+/* ---- Adaptive: under power/thermal pressure, skip the expensive effects ---- */
+
+[data-power="saver"] *,
+[data-power="saver"] *::before,
+[data-power="saver"] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
   }
 }
