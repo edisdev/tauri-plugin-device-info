@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Vitals app icon. Source for: tauri icon app-icon.svg (iOS background color #000000).
+       Rounded square sits on the macOS icon grid (824 px, 100 px margin). -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#000000"/>
+  <rect x="103" y="103" width="818" height="818" rx="182" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="6"/>
+  <g transform="translate(100 100) scale(6.8667)">
+    <polyline points="18,62 40,62 48,44 58,82 68,36 76,62 102,62" fill="none" stroke="#30d158" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

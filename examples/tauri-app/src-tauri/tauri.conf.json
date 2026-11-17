@@ -1,5 +1,5 @@
 {
-  "productName": "tauri-app",
+  "productName": "Vitals",
   "version": "0.1.0",
   "identifier": "com.tauri.plugin.deviceinfo",
   "build": {
@@ -16,10 +16,12 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 820,
+        "minHeight": 560,
+        "minWidth": 380,
         "resizable": true,
-        "title": "tauri-app",
-        "width": 800
+        "title": "Vitals",
+        "width": 1280
       }
     ]
   },
@@ -32,6 +34,9 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "iOS": {
+      "minimumSystemVersion": "15.0"
+    }
   }
 }
