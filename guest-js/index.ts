@@ -101,16 +101,31 @@ async function watch<T>(
   callback: (value: T) => void,
   options?: WatchOptions
 ): Promise<UnwatchFn> {
+  // Listen before starting so no change emitted after the start is missed.
+  let changed = false
   const unlisten = await listen<T>(`device-info://${kind}-changed`, (event) => {
+    changed = true
     callback(event.payload)
   })
 
+  let current: T | null
   try {
-    await invoke('plugin:device-info|start_watching', { kind, intervalMs: options?.intervalMs })
+    // Returns the current value for this subscriber only; the backend emits
+    // events only on change, so other subscribers don't get a duplicate.
+    current = await invoke<T | null>('plugin:device-info|start_watching', {
+      kind,
+      intervalMs: options?.intervalMs
+    })
   } catch (error) {
     // Don't leak the event listener if the backend failed to start the watcher.
     unlisten()
     throw error
+  }
+
+  // A change event that already arrived is at least as new as `current`;
+  // delivering `current` after it would roll the caller back to a stale value.
+  if (current !== null && current !== undefined && !changed) {
+    callback(current)
   }
 
   return async () => {

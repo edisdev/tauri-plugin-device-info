@@ -39,12 +39,14 @@ pub(crate) async fn get_device_tier<R: Runtime>(app: AppHandle<R>) -> Result<Dev
     app.device_info().get_device_tier()
 }
 
+/// Starts watching `kind` and returns its current value (or `null` if it
+/// couldn't be read), for the calling subscriber only.
 #[command]
 pub(crate) async fn start_watching<R: Runtime>(
     app: AppHandle<R>,
     kind: String,
     interval_ms: Option<u64>,
-) -> Result<()> {
+) -> Result<Option<serde_json::Value>> {
     crate::watcher::start(&app, &kind, interval_ms)
 }
 

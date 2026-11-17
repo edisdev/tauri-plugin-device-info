@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use tauri::{AppHandle, Runtime};
 
-use super::{emit_if_changed, event_name, MonitorHandle};
+use super::{emit_if_changed, event_name, lock_last, LastValue, MonitorHandle};
 
 /// Default polling interval for a kind when the caller does not specify one.
 ///
@@ -62,12 +62,14 @@ impl MonitorHandle for PollingHandle {
 
 /// Spawns a poller thread for `kind` and returns its handle.
 ///
-/// The current value is emitted on the first iteration so a fresh subscriber
-/// gets the initial state without waiting a full interval.
+/// The first read happens one interval in: the initial value is returned to the
+/// subscriber by [`super::start`], which seeds `last` with it, so the poller
+/// only has to report changes from there.
 pub(super) fn spawn<R: Runtime>(
     app: &AppHandle<R>,
     kind: &str,
     interval_ms: Option<u64>,
+    last: LastValue,
 ) -> Box<dyn MonitorHandle> {
     let interval = interval_ms
         .unwrap_or_else(|| default_interval_ms(kind))
@@ -82,11 +84,8 @@ pub(super) fn spawn<R: Runtime>(
         let event = event_name(&kind);
         let interval = Duration::from_millis(interval);
         let (lock, cvar) = &*stop_flag;
-        let mut last: Option<serde_json::Value> = None;
 
         loop {
-            emit_if_changed(&app, &event, &kind, &mut last);
-
             // Sleep for the full interval, but wake the instant `stop` is called.
             let guard = lock.lock().unwrap_or_else(|e| e.into_inner());
             if *guard {
@@ -100,6 +99,8 @@ pub(super) fn spawn<R: Runtime>(
             if stopped {
                 break;
             }
+
+            emit_if_changed(&app, &event, &kind, &mut lock_last(&last));
         }
     });
 

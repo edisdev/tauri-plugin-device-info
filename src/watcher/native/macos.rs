@@ -21,7 +21,7 @@ use std::thread::JoinHandle;
 
 use tauri::{AppHandle, Runtime};
 
-use crate::watcher::{emit_if_changed, event_name, MonitorHandle};
+use crate::watcher::{emit_if_changed, event_name, lock_last, LastValue, MonitorHandle};
 
 // ---- Core Foundation FFI ----------------------------------------------------
 
@@ -180,15 +180,17 @@ struct EmitCtx<R: Runtime> {
     app: AppHandle<R>,
     kind: String,
     event: String,
-    last: Mutex<Option<serde_json::Value>>,
+    last: LastValue,
 }
 
 impl<R: Runtime> Fire for EmitCtx<R> {
     fn fire(&self) {
-        let Ok(mut last) = self.last.lock() else {
-            return;
-        };
-        emit_if_changed(&self.app, &self.event, &self.kind, &mut last);
+        emit_if_changed(
+            &self.app,
+            &self.event,
+            &self.kind,
+            &mut lock_last(&self.last),
+        );
     }
 }
 
@@ -382,6 +384,7 @@ fn register_network(run_loop: CFRunLoopRef, ctx: *mut c_void) -> Teardown {
 pub(super) fn try_spawn<R: Runtime>(
     app: &AppHandle<R>,
     kind: &str,
+    last: LastValue,
 ) -> crate::Result<Option<Box<dyn MonitorHandle>>> {
     let register: fn(CFRunLoopRef, *mut c_void) -> Teardown = match kind {
         "battery" => register_battery,
@@ -390,20 +393,21 @@ pub(super) fn try_spawn<R: Runtime>(
         // storage and device have no OS change event; poll them.
         _ => return Ok(None),
     };
-    Ok(Some(spawn_runloop(app, kind, register)))
+    Ok(Some(spawn_runloop(app, kind, last, register)))
 }
 
 /// Spawns a dedicated run-loop thread, registers the OS source, and returns its handle.
 fn spawn_runloop<R: Runtime>(
     app: &AppHandle<R>,
     kind: &str,
+    last: LastValue,
     register: fn(CFRunLoopRef, *mut c_void) -> Teardown,
 ) -> Box<dyn MonitorHandle> {
     let ctx: Box<dyn Fire> = Box::new(EmitCtx {
         app: app.clone(),
         kind: kind.to_string(),
         event: event_name(kind),
-        last: Mutex::new(None),
+        last,
     });
     // A thin pointer to the fat trait-object pointer, so it fits in a C `void*`.
     let ctx_ptr = Box::into_raw(Box::new(ctx)) as usize;
@@ -461,7 +465,8 @@ fn spawn_runloop<R: Runtime>(
             cvar.notify_all();
         }
 
-        // Emit the current value immediately so a fresh subscriber gets initial state.
+        // Catch a change between the subscriber's initial read (which seeded
+        // `last`) and the registration above; emits only if the value differs.
         // SAFETY: `ctx_ptr` is valid until freed below, after the run loop stops.
         unsafe { fire_ctx(ctx_void) };
 

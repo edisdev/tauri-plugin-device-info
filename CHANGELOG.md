@@ -38,8 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Watch API: late subscribers now get the current value.** A `watch*` call
   for a kind that was already being watched (a second component, or the same
   page after a webview reload) only received *future* changes, because the
-  running monitor emits on change. The plugin now sends the current value to
-  every new subscriber, as documented.
+  running monitor emits on change. `start_watching` now returns the current
+  value, which the `watch*` call delivers to its own callback only; monitors
+  emit only on change, so existing subscribers no longer see duplicates and
+  the first subscriber gets the initial value exactly once.
 - **iOS / Android: unknown battery level reported as 0%.** iOS sent `0` when
   `batteryLevel` is unknown (always on the Simulator) and Android passed through
   an unsupported `BATTERY_PROPERTY_CAPACITY`; `level` is now omitted instead

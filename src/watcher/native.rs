@@ -15,25 +15,29 @@
 
 use tauri::{AppHandle, Runtime};
 
-use super::MonitorHandle;
+use super::{LastValue, MonitorHandle};
 
 #[cfg(target_os = "macos")]
 mod macos;
 
 /// Returns a native event-driven monitor for `kind` if this platform supports
 /// one, else `Ok(None)` so the caller falls back to polling.
+///
+/// The monitor must compare against, and update, the shared `last` (holding its
+/// lock across each read-compare-emit), and must only emit on change.
 pub(super) fn try_spawn<R: Runtime>(
     app: &AppHandle<R>,
     kind: &str,
+    last: LastValue,
 ) -> crate::Result<Option<Box<dyn MonitorHandle>>> {
     #[cfg(target_os = "macos")]
     {
-        macos::try_spawn(app, kind)
+        macos::try_spawn(app, kind, last)
     }
 
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = (app, kind);
+        let _ = (app, kind, last);
         Ok(None)
     }
 }
