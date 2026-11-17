@@ -178,4 +178,83 @@ class DeviceInfo(private val activity: Activity) : Plugin(activity) {
       invoke.reject("Failed to get display info: ${e.message}")
     }
   }
+  @Command
+  fun get_power_state(invoke: Invoke) {
+    try {
+      val powerManager =
+              activity.getSystemService(android.content.Context.POWER_SERVICE) as
+                      android.os.PowerManager
+
+      val jsObject = JSObject()
+      jsObject.put("lowPowerMode", powerManager.isPowerSaveMode)
+
+      // Thermal status exists from Android 10 (API 29); map Android's 7 levels
+      // onto the plugin's 4-level (Apple) scale.
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val thermal =
+                when (powerManager.currentThermalStatus) {
+                  android.os.PowerManager.THERMAL_STATUS_NONE -> "nominal"
+                  android.os.PowerManager.THERMAL_STATUS_LIGHT,
+                  android.os.PowerManager.THERMAL_STATUS_MODERATE -> "fair"
+                  android.os.PowerManager.THERMAL_STATUS_SEVERE -> "serious"
+                  android.os.PowerManager.THERMAL_STATUS_CRITICAL,
+                  android.os.PowerManager.THERMAL_STATUS_EMERGENCY,
+                  android.os.PowerManager.THERMAL_STATUS_SHUTDOWN -> "critical"
+                  else -> null
+                }
+        if (thermal != null) jsObject.put("thermalState", thermal)
+      }
+
+      invoke.resolve(jsObject)
+    } catch (e: Exception) {
+      invoke.reject("Failed to get power state: ${e.message}")
+    }
+  }
+
+  @Command
+  fun get_hardware_info(invoke: Invoke) {
+    try {
+      val activityManager =
+              activity.getSystemService(android.content.Context.ACTIVITY_SERVICE) as
+                      android.app.ActivityManager
+      val memoryInfo = android.app.ActivityManager.MemoryInfo()
+      activityManager.getMemoryInfo(memoryInfo)
+
+      val jsObject = JSObject()
+      jsObject.put("cpuCores", Runtime.getRuntime().availableProcessors())
+      jsObject.put("totalMemory", memoryInfo.totalMem)
+      jsObject.put("isMobile", true)
+      jsObject.put("isLowRamDevice", activityManager.isLowRamDevice)
+
+      val maxMhz = readCpuMaxFrequencyMhz()
+      if (maxMhz != null) jsObject.put("cpuMaxFrequencyMhz", maxMhz)
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        jsObject.put("cpuModel", Build.SOC_MODEL.takeUnless { it == Build.UNKNOWN } ?: Build.HARDWARE)
+        // 0 means the device declares no media performance class.
+        val mpc = Build.VERSION.MEDIA_PERFORMANCE_CLASS
+        if (mpc > 0) jsObject.put("mediaPerformanceClass", mpc)
+      } else {
+        jsObject.put("cpuModel", Build.HARDWARE)
+      }
+
+      invoke.resolve(jsObject)
+    } catch (e: Exception) {
+      invoke.reject("Failed to get hardware info: ${e.message}")
+    }
+  }
+
+  /** Highest `cpuinfo_max_freq` across cores in MHz (big.LITTLE: the prime core), or null. */
+  private fun readCpuMaxFrequencyMhz(): Long? {
+    val cpus = java.io.File("/sys/devices/system/cpu").listFiles { f -> f.name.matches(Regex("cpu\\d+")) }
+            ?: return null
+    return cpus.mapNotNull { cpu ->
+              try {
+                java.io.File(cpu, "cpufreq/cpuinfo_max_freq").readText().trim().toLong() / 1000
+              } catch (e: Exception) {
+                null
+              }
+            }
+            .maxOrNull()
+  }
 }

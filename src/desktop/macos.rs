@@ -101,6 +101,35 @@ pub fn get_display_refresh_rate() -> Option<f64> {
     }
 }
 
+/// Reads Low Power Mode and thermal state from `NSProcessInfo`.
+///
+/// Low Power Mode exists on macOS 12+; on older systems the selector is absent
+/// and `low_power_mode` is `None` rather than crashing on an unknown selector.
+pub fn get_power_state() -> PowerState {
+    use objc2::runtime::NSObjectProtocol;
+    use objc2::sel;
+    use objc2_foundation::{NSProcessInfo, NSProcessInfoThermalState};
+
+    let info = NSProcessInfo::processInfo();
+
+    let thermal_state = match info.thermalState() {
+        NSProcessInfoThermalState::Nominal => Some(ThermalState::Nominal),
+        NSProcessInfoThermalState::Fair => Some(ThermalState::Fair),
+        NSProcessInfoThermalState::Serious => Some(ThermalState::Serious),
+        NSProcessInfoThermalState::Critical => Some(ThermalState::Critical),
+        _ => None,
+    };
+
+    let low_power_mode = info
+        .respondsToSelector(sel!(isLowPowerModeEnabled))
+        .then(|| info.isLowPowerModeEnabled());
+
+    PowerState {
+        low_power_mode,
+        thermal_state,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     // Tests for parsing logic - no imports needed as we test parsing directly

@@ -109,6 +109,135 @@ pub struct DisplayInfo {
 }
 
 // ============================================================================
+// Power State & Power Profile
+// ============================================================================
+
+/// How hot the device is running, using Apple's four-level scale.
+///
+/// Platforms with finer scales are mapped onto it (e.g. Android's
+/// `THERMAL_STATUS_SEVERE` → [`ThermalState::Serious`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ThermalState {
+    /// Normal operating temperature.
+    Nominal,
+    /// Slightly elevated; consider trimming background work.
+    Fair,
+    /// High; the OS is throttling. Reduce CPU/GPU work.
+    Serious,
+    /// Very high; the system may shut work down. Do the minimum.
+    Critical,
+}
+
+/// Raw power-related OS signals, as reported by the platform.
+///
+/// Fields are `None` when the platform doesn't expose the signal.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PowerState {
+    /// Whether the OS power-saving mode is on (Low Power Mode, Battery Saver, `low-power` profile).
+    pub low_power_mode: Option<bool>,
+    /// Current thermal pressure.
+    pub thermal_state: Option<ThermalState>,
+}
+
+/// The recommended amount of work an app should do right now.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PowerProfileKind {
+    /// No constraints — run at full quality.
+    Full,
+    /// Some pressure — skip non-essential work, lower animation/refresh rates.
+    Balanced,
+    /// Heavy pressure — do the minimum; pause background work and effects.
+    Saver,
+}
+
+/// Why a [`PowerProfile`] is not [`PowerProfileKind::Full`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PowerProfileReason {
+    /// The OS power-saving mode is on. → `saver`
+    LowPowerMode,
+    /// Thermal state is `critical`. → `saver`
+    ThermalCritical,
+    /// Thermal state is `serious`. → `saver`
+    ThermalSerious,
+    /// Thermal state is `fair`. → `balanced`
+    ThermalFair,
+    /// On battery at or below the critical threshold (20%). → `saver`
+    BatteryCritical,
+    /// On battery at or below the low threshold (40%). → `balanced`
+    BatteryLow,
+}
+
+/// A single, actionable power signal combining battery, power-saving mode and
+/// thermal state.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PowerProfile {
+    /// The recommended profile.
+    pub profile: PowerProfileKind,
+    /// Every condition that pushed the profile below `full` (empty when `full`).
+    pub reasons: Vec<PowerProfileReason>,
+    /// Battery level (0-100), or `None` on devices without a battery.
+    pub battery_level: Option<f32>,
+    /// Whether the device is charging.
+    pub is_charging: Option<bool>,
+    /// Whether the OS power-saving mode is on.
+    pub low_power_mode: Option<bool>,
+    /// Current thermal pressure.
+    pub thermal_state: Option<ThermalState>,
+}
+
+// ============================================================================
+// Hardware & Device Tier
+// ============================================================================
+
+/// Hardware capability signals used to classify the device.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HardwareInfo {
+    /// Logical CPU core count.
+    pub cpu_cores: Option<u32>,
+    /// Physical CPU core count.
+    pub physical_cores: Option<u32>,
+    /// CPU / SoC name (e.g. "Apple M2", "Intel(R) Core(TM) i7-1165G7", "Tensor G3").
+    pub cpu_model: Option<String>,
+    /// Highest CPU clock in MHz, when the platform exposes it.
+    pub cpu_max_frequency_mhz: Option<u64>,
+    /// Total physical memory in bytes.
+    pub total_memory: Option<u64>,
+    /// `true` on phones/tablets — tiers are scored against mobile hardware.
+    pub is_mobile: bool,
+    /// Android only: the OS flagged this as a low-RAM device.
+    pub is_low_ram_device: Option<bool>,
+    /// Android 12+ only: the declared media performance class (e.g. 31, 33), if any.
+    pub media_performance_class: Option<u32>,
+}
+
+/// Coarse device capability class.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DeviceTierKind {
+    Low,
+    Mid,
+    High,
+}
+
+/// How capable this device is, relative to others of its form factor.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceTier {
+    /// The capability class.
+    pub tier: DeviceTierKind,
+    /// Capability score from 0 (weakest) to 100 (strongest).
+    pub score: u8,
+    /// The hardware signals the score was computed from.
+    pub hardware: HardwareInfo,
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 

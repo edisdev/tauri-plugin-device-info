@@ -131,6 +131,42 @@ class DeviceInfoPlugin: Plugin {
         ])
     }
     
+    @objc public func get_power_state(_ invoke: Invoke) throws {
+        let info = ProcessInfo.processInfo
+
+        var thermal: String?
+        switch info.thermalState {
+        case .nominal: thermal = "nominal"
+        case .fair: thermal = "fair"
+        case .serious: thermal = "serious"
+        case .critical: thermal = "critical"
+        @unknown default: thermal = nil
+        }
+
+        invoke.resolve([
+            "lowPowerMode": info.isLowPowerModeEnabled,
+            "thermalState": thermal
+        ])
+    }
+
+    @objc public func get_hardware_info(_ invoke: Invoke) throws {
+        let info = ProcessInfo.processInfo
+
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let modelCode = withUnsafePointer(to: &systemInfo.machine) {
+            $0.withMemoryRebound(to: CChar.self, capacity: 1) { String(validatingUTF8: $0) }
+        }
+
+        // iOS exposes no CPU clock speed; the tier is scored from memory and cores.
+        invoke.resolve([
+            "cpuCores": info.processorCount,
+            "cpuModel": modelCode,
+            "totalMemory": info.physicalMemory,
+            "isMobile": true
+        ])
+    }
+
     // Helper to try and get user-assigned device name
     private func getDeviceName() -> String {
         let deviceName = UIDevice.current.name

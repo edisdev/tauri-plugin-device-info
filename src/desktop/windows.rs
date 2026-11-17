@@ -193,3 +193,20 @@ mod tests {
         assert!(fallback.uuid.is_none());
     }
 }
+
+/// Reads Battery Saver / Energy Saver state from `GetSystemPowerStatus`.
+///
+/// `SystemStatusFlag` (exposed by winapi as `Reserved1`) is `1` while the
+/// saver is on (Windows 10+). Windows has no public thermal-pressure API, so
+/// `thermal_state` is always `None`.
+pub fn get_power_state() -> crate::models::PowerState {
+    use winapi::um::winbase::{GetSystemPowerStatus, SYSTEM_POWER_STATUS};
+
+    let mut status: SYSTEM_POWER_STATUS = unsafe { std::mem::zeroed() };
+    let ok = unsafe { GetSystemPowerStatus(&mut status) } != 0;
+
+    crate::models::PowerState {
+        low_power_mode: ok.then_some(status.Reserved1 & 1 == 1),
+        thermal_state: None,
+    }
+}

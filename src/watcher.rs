@@ -29,7 +29,9 @@ mod native;
 mod polling;
 
 /// The kinds of device information that can be watched.
-pub(crate) const WATCH_KINDS: &[&str] = &["battery", "network", "storage", "display", "device"];
+pub(crate) const WATCH_KINDS: &[&str] = &[
+    "battery", "network", "storage", "display", "device", "power",
+];
 
 /// A running change-event source for one kind.
 ///
@@ -71,6 +73,7 @@ pub(crate) fn read_snapshot<R: Runtime>(
         "storage" => serde_json::to_value(di.get_storage_info()?),
         "display" => serde_json::to_value(di.get_display_info()?),
         "device" => serde_json::to_value(di.get_device_info()?),
+        "power" => serde_json::to_value(di.get_power_profile()?),
         other => {
             return Err(crate::Error::DeviceInfo(format!(
                 "unknown watch kind: {other}"
@@ -188,7 +191,9 @@ mod tests {
 
     #[test]
     fn watch_kinds_cover_all_getters() {
-        for kind in ["battery", "network", "storage", "display", "device"] {
+        for kind in [
+            "battery", "network", "storage", "display", "device", "power",
+        ] {
             assert!(WATCH_KINDS.contains(&kind), "missing watch kind: {kind}");
         }
     }
@@ -263,6 +268,23 @@ mod tests {
 
         stop(app.handle(), "storage").unwrap();
         stop(app.handle(), "storage").unwrap();
+    }
+
+    /// The adaptive getters read real OS signals on the host; they must not
+    /// error and must produce in-range values.
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn adaptive_getters_work_on_host() {
+        let app = mock_app();
+        let di = app.handle().device_info();
+
+        let profile = di.get_power_profile().unwrap();
+        println!("power profile: {profile:?}");
+
+        let tier = di.get_device_tier().unwrap();
+        println!("device tier: {tier:?}");
+        assert!(tier.score <= 100);
+        assert!(!tier.hardware.is_mobile);
     }
 
     #[cfg(not(target_os = "windows"))]

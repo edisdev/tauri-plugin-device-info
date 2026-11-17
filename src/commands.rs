@@ -30,6 +30,16 @@ pub(crate) async fn get_display_info<R: Runtime>(app: AppHandle<R>) -> Result<Di
 }
 
 #[command]
+pub(crate) async fn get_power_profile<R: Runtime>(app: AppHandle<R>) -> Result<PowerProfile> {
+    app.device_info().get_power_profile()
+}
+
+#[command]
+pub(crate) async fn get_device_tier<R: Runtime>(app: AppHandle<R>) -> Result<DeviceTier> {
+    app.device_info().get_device_tier()
+}
+
+#[command]
 pub(crate) async fn start_watching<R: Runtime>(
     app: AppHandle<R>,
     kind: String,

@@ -54,4 +54,29 @@ impl<R: Runtime> DeviceInfo<R> {
             .run_mobile_plugin("get_display_info", ())
             .map_err(Into::into)
     }
+    pub fn get_power_state(&self) -> crate::Result<PowerState> {
+        self.0
+            .run_mobile_plugin("get_power_state", ())
+            .map_err(Into::into)
+    }
+
+    /// Combines battery, power-saving mode and thermal state into a single
+    /// `full | balanced | saver` recommendation. See [`crate::adaptive::power_profile`].
+    pub fn get_power_profile(&self) -> crate::Result<PowerProfile> {
+        Ok(crate::adaptive::power_profile(
+            &self.get_battery_info()?,
+            &self.get_power_state()?,
+        ))
+    }
+
+    pub fn get_hardware_info(&self) -> crate::Result<HardwareInfo> {
+        self.0
+            .run_mobile_plugin("get_hardware_info", ())
+            .map_err(Into::into)
+    }
+
+    /// Classifies the device as `low | mid | high`. See [`crate::adaptive::device_tier`].
+    pub fn get_device_tier(&self) -> crate::Result<DeviceTier> {
+        Ok(crate::adaptive::device_tier(self.get_hardware_info()?))
+    }
 }

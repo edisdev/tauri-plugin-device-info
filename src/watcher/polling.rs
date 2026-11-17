@@ -26,6 +26,9 @@ fn default_interval_ms(kind: &str) -> u64 {
     match kind {
         "device" => 60_000,
         "storage" => 10_000,
+        // Thermal and power-saving changes play out over seconds; on macOS the
+        // battery half of the reading shells out to `pmset`.
+        "power" => 5_000,
         _ => 2_000,
     }
 }
@@ -35,7 +38,7 @@ fn default_interval_ms(kind: &str) -> u64 {
 fn min_interval_ms(kind: &str) -> u64 {
     match kind {
         "device" => 10_000,
-        "storage" => 1_000,
+        "storage" | "power" => 1_000,
         _ => 250,
     }
 }
