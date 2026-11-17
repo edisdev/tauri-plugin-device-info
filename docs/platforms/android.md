@@ -1,9 +1,6 @@
 # Android
 
-<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <img src="/DeviceInfo_Android.png" width="300" style="border-radius: 8px;">
-  <img src="/DeviceInfo_Android_Gif.gif" width="300" style="border-radius: 8px;">
-</div>
+![The example app on a Galaxy A17 (Android 16): the battery drops to 40% and the profile turns Balanced; thermal state, storage and the Saver simulation](/DeviceInfo_Android.gif){width=300}
 
 ## Implementation
 
