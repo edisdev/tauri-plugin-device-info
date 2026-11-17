@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-11-17
+
+### Fixed
+
+- **Android: Kotlin 2.x compatibility** — replaced the deprecated
+  `kotlinOptions { jvmTarget = "1.8" }` block in `android/build.gradle.kts`
+  with `kotlin { compilerOptions { jvmTarget = JvmTarget.JVM_1_8 } }`. Since
+  Kotlin 2.2 the `kotlinOptions` DSL is an error, which broke Android builds of
+  consuming apps on Kotlin Gradle plugin 2.x. The new form matches Tauri's own
+  Android module and still works with Kotlin 1.9, so consumers are not forced to
+  upgrade. No Rust or JS API changes; returned device information is unchanged.
+
 ## [1.1.0] - 2026-08-24
 
 ### Added
@@ -64,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `getStorageInfo`, and `getDisplayInfo` across Windows, macOS, Linux, iOS, and
   Android.
 
+[1.1.1]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.1.1
 [1.1.0]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.1.0
 [1.0.1]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.0.1
 [1.0.0]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.0.0
