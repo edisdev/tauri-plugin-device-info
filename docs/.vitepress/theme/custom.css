@@ -1,0 +1,151 @@
+/*
+ * Brand theme for the docs: warm sand in light, true black + vivid green in
+ * dark — the same visual language as the Vitals example app.
+ * Everything else is VitePress's default theme, recolored through --vp-c-*.
+ */
+
+:root {
+  --vp-font-family-base: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --vp-font-family-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  --vp-c-bg: #f7f2ea;
+  --vp-c-bg-alt: #f1e9dd;
+  --vp-c-bg-elv: #fffcf7;
+  --vp-c-bg-soft: #efe6d9;
+
+  --vp-c-text-1: #1f1a14;
+  --vp-c-text-2: #3d342a;
+  --vp-c-text-3: #6b5d4f;
+
+  --vp-c-divider: rgba(60, 40, 20, 0.13);
+  --vp-c-border: rgba(60, 40, 20, 0.2);
+  --vp-c-gutter: rgba(60, 40, 20, 0.08);
+
+  --vp-c-brand-1: #15803d;
+  --vp-c-brand-2: #166534;
+  --vp-c-brand-3: #15803d;
+  --vp-c-brand-soft: rgba(21, 128, 61, 0.1);
+
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-active-text: #ffffff;
+
+  --vp-code-block-bg: #fffcf7;
+  --vp-code-bg: rgba(60, 40, 20, 0.07);
+  --vp-nav-bg-color: #f7f2ea;
+  --vp-sidebar-bg-color: #f7f2ea;
+
+  /* Home page tokens */
+  --di-surface: #fffcf7;
+  --di-band: #f1e9dd;
+  --di-track: rgba(60, 40, 20, 0.14);
+  --di-dot: rgba(60, 40, 20, 0.18);
+  --di-good: #15803d;
+  --di-warn: #a16207;
+  --di-bad: #b91c1c;
+  --di-good-soft: rgba(21, 128, 61, 0.06);
+  --di-warn-soft: rgba(161, 98, 7, 0.06);
+  --di-bad-soft: rgba(185, 28, 28, 0.06);
+  --di-good-line: rgba(21, 128, 61, 0.28);
+  --di-warn-line: rgba(161, 98, 7, 0.28);
+  --di-bad-line: rgba(185, 28, 28, 0.28);
+  --di-on-accent: #ffffff;
+  --di-code-text: #2b2017;
+  --di-kw: #a0612b;
+  --di-str: #15803d;
+  --di-fn: #1d4ed8;
+  --di-comment: #7a6a58;
+}
+
+.dark {
+  --vp-c-bg: #000000;
+  --vp-c-bg-alt: #060607;
+  --vp-c-bg-elv: #0b0b0d;
+  --vp-c-bg-soft: #0b0b0d;
+
+  --vp-c-text-1: #ffffff;
+  --vp-c-text-2: #d1d1d6;
+  --vp-c-text-3: #a1a1aa;
+
+  --vp-c-divider: rgba(255, 255, 255, 0.11);
+  --vp-c-border: rgba(255, 255, 255, 0.18);
+  --vp-c-gutter: rgba(255, 255, 255, 0.06);
+
+  --vp-c-brand-1: #30d158;
+  --vp-c-brand-2: #5ee07f;
+  --vp-c-brand-3: #30d158;
+  --vp-c-brand-soft: rgba(48, 209, 88, 0.14);
+
+  --vp-button-brand-text: #000000;
+  --vp-button-brand-hover-text: #000000;
+  --vp-button-brand-active-text: #000000;
+
+  --vp-code-block-bg: #0b0b0d;
+  --vp-code-bg: rgba(255, 255, 255, 0.08);
+  --vp-nav-bg-color: #000000;
+  --vp-sidebar-bg-color: #000000;
+
+  --di-surface: #0b0b0d;
+  --di-band: #060607;
+  --di-track: rgba(255, 255, 255, 0.14);
+  --di-dot: rgba(255, 255, 255, 0.18);
+  --di-good: #30d158;
+  --di-warn: #ffd60a;
+  --di-bad: #ff453a;
+  --di-good-soft: rgba(48, 209, 88, 0.08);
+  --di-warn-soft: rgba(255, 214, 10, 0.08);
+  --di-bad-soft: rgba(255, 69, 58, 0.08);
+  --di-good-line: rgba(48, 209, 88, 0.35);
+  --di-warn-line: rgba(255, 214, 10, 0.35);
+  --di-bad-line: rgba(255, 69, 58, 0.35);
+  --di-on-accent: #000000;
+  --di-code-text: #e5e5ea;
+  --di-kw: #ff7ab2;
+  --di-str: #30d158;
+  --di-fn: #64d2ff;
+  --di-comment: #8e8e93;
+}
+
+/* The site title is the package name, set in mono like the design. */
+.VPNavBarTitle .title {
+  font-family: var(--vp-font-family-mono);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.vp-doc h1 {
+  letter-spacing: -0.03em;
+}
+
+/* On phones VitePress squeezes the last table column to a sliver and rows
+   grow very tall; give cells a floor so the table scrolls sideways instead. */
+@media (max-width: 640px) {
+  .vp-doc th,
+  .vp-doc td {
+    min-width: 220px;
+  }
+}
+
+/* Platform previews: a visible edge in both themes (the recordings are dark
+   and otherwise melt into the dark page), centered. */
+.vp-doc img.preview {
+  display: block;
+  margin: 8px auto 0;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 14px;
+  background: #000000;
+  box-shadow: 0 14px 40px rgba(60, 40, 20, 0.16);
+}
+
+.dark .vp-doc img.preview {
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+}
+
+/* Pages that turn the outline off (desktop platform pages) get a wider
+   column, so desktop screenshots aren't shrunk to the 688px text width. */
+@media (min-width: 1280px) {
+  .VPDoc:not(.has-aside) .content-container {
+    max-width: 960px !important;
+  }
+}
