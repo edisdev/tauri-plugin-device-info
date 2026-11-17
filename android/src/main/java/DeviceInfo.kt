@@ -54,14 +54,23 @@ class DeviceInfo(private val activity: Activity) : Plugin(activity) {
       val batteryManager =
               activity.getSystemService(android.content.Context.BATTERY_SERVICE) as
                       android.os.BatteryManager
-      val level =
-              batteryManager
-                      .getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
-                      .toFloat()
-
       // Use Intent-based approach for reliable charging check on all Android versions
       val ifilter = android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
       val batteryStatus = activity.registerReceiver(null, ifilter)
+
+      // BATTERY_PROPERTY_CAPACITY is Integer.MIN_VALUE (or 0) when the device
+      // doesn't support it; fall back to the sticky intent's level/scale, and
+      // report no level at all rather than a bogus one.
+      val capacity =
+              batteryManager.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+      val level: Float? =
+              if (capacity in 1..100) {
+                capacity.toFloat()
+              } else {
+                val raw = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                val scale = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+                if (raw >= 0 && scale > 0) raw * 100f / scale else null
+              }
 
       val status = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
       val isChargingBool =
@@ -88,7 +97,7 @@ class DeviceInfo(private val activity: Activity) : Plugin(activity) {
               }
 
       val jsObject = JSObject()
-      jsObject.put("level", level)
+      if (level != null) jsObject.put("level", level.toDouble())
       jsObject.put("isCharging", isChargingBool)
       jsObject.put("health", healthString)
 
@@ -187,6 +196,18 @@ class DeviceInfo(private val activity: Activity) : Plugin(activity) {
 
       val jsObject = JSObject()
       jsObject.put("lowPowerMode", powerManager.isPowerSaveMode)
+
+      // Plugged into AC / USB / wireless, even when not charging (full or held
+      // at a charge limit). Omitted if the sticky battery intent is unavailable.
+      val batteryStatus =
+              activity.registerReceiver(
+                      null,
+                      android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
+              )
+      if (batteryStatus != null) {
+        val plugged = batteryStatus.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0)
+        jsObject.put("onExternalPower", plugged != 0)
+      }
 
       // Thermal status exists from Android 10 (API 29); map Android's 7 levels
       // onto the plugin's 4-level (Apple) scale.

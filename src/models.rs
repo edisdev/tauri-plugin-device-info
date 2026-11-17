@@ -139,6 +139,10 @@ pub struct PowerState {
     pub low_power_mode: Option<bool>,
     /// Current thermal pressure.
     pub thermal_state: Option<ThermalState>,
+    /// Whether the device is running on external power (AC adapter, USB-C
+    /// charger), even if the battery is not charging — e.g. full, or held at a
+    /// charge limit. `None` when the platform doesn't say.
+    pub on_external_power: Option<bool>,
 }
 
 /// The recommended amount of work an app should do right now.
@@ -180,7 +184,8 @@ pub struct PowerProfile {
     pub profile: PowerProfileKind,
     /// Every condition that pushed the profile below `full` (empty when `full`).
     pub reasons: Vec<PowerProfileReason>,
-    /// Battery level (0-100), or `None` on devices without a battery.
+    /// Battery level (0-100), or `None` on devices without a battery or when
+    /// the platform reported an implausible/unknown level.
     pub battery_level: Option<f32>,
     /// Whether the device is charging.
     pub is_charging: Option<bool>,
@@ -188,6 +193,9 @@ pub struct PowerProfile {
     pub low_power_mode: Option<bool>,
     /// Current thermal pressure.
     pub thermal_state: Option<ThermalState>,
+    /// Whether the device is on external power, even when not charging.
+    /// `None` when the platform doesn't say.
+    pub on_external_power: Option<bool>,
 }
 
 // ============================================================================

@@ -127,12 +127,84 @@ pub fn get_power_state() -> PowerState {
     PowerState {
         low_power_mode,
         thermal_state,
+        on_external_power: providing_power_source()
+            .as_deref()
+            .and_then(power_source_is_external),
+    }
+}
+
+/// The power source currently powering the Mac, from IOKit power sources
+/// (`"AC Power"`, `"Battery Power"` or `"UPS Power"`).
+fn providing_power_source() -> Option<String> {
+    use std::ffi::{c_char, c_void, CStr};
+
+    #[link(name = "IOKit", kind = "framework")]
+    extern "C" {
+        fn IOPSCopyPowerSourcesInfo() -> *const c_void;
+        fn IOPSGetProvidingPowerSourceType(snapshot: *const c_void) -> *const c_void;
+    }
+    #[link(name = "CoreFoundation", kind = "framework")]
+    extern "C" {
+        fn CFStringGetCString(
+            string: *const c_void,
+            buffer: *mut c_char,
+            buffer_size: isize,
+            encoding: u32,
+        ) -> u8;
+        fn CFRelease(cf: *const c_void);
+    }
+    const CF_STRING_ENCODING_UTF8: u32 = 0x0800_0100;
+
+    // SAFETY: the snapshot follows the Create rule and is released below; the
+    // source type string follows the Get rule (owned by the snapshot) and is
+    // copied out before the snapshot is released.
+    unsafe {
+        let snapshot = IOPSCopyPowerSourcesInfo();
+        if snapshot.is_null() {
+            return None;
+        }
+        let kind = IOPSGetProvidingPowerSourceType(snapshot);
+        let mut buf = [0 as c_char; 64];
+        let copied = !kind.is_null()
+            && CFStringGetCString(
+                kind,
+                buf.as_mut_ptr(),
+                buf.len() as isize,
+                CF_STRING_ENCODING_UTF8,
+            ) != 0;
+        let result = copied.then(|| CStr::from_ptr(buf.as_ptr()).to_string_lossy().into_owned());
+        CFRelease(snapshot);
+        result
+    }
+}
+
+/// Maps an IOKit providing-power-source type to "on external power".
+fn power_source_is_external(kind: &str) -> Option<bool> {
+    match kind {
+        "AC Power" => Some(true),
+        "Battery Power" => Some(false),
+        // A UPS is external but itself on battery; don't guess.
+        _ => None,
     }
 }
 
 #[cfg(test)]
 mod tests {
-    // Tests for parsing logic - no imports needed as we test parsing directly
+    use super::*;
+
+    #[test]
+    fn power_source_type_maps_to_external_power() {
+        assert_eq!(power_source_is_external("AC Power"), Some(true));
+        assert_eq!(power_source_is_external("Battery Power"), Some(false));
+        assert_eq!(power_source_is_external("UPS Power"), None);
+    }
+
+    #[test]
+    fn providing_power_source_reads_on_host() {
+        // Must not crash; CI VMs may not report a source at all.
+        let source = providing_power_source();
+        println!("providing power source: {source:?}");
+    }
 
     #[test]
     fn parse_battery_percentage_from_pmset_output() {

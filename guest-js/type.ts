@@ -50,6 +50,9 @@ export type PowerProfileKind = 'full' | 'balanced' | 'saver';
  * - `thermalFair` — device is warm (→ balanced)
  * - `batteryCritical` — on battery at ≤ 20% (→ saver)
  * - `batteryLow` — on battery at ≤ 40% (→ balanced)
+ *
+ * "On battery" means not charging and not on external power; an unknown or
+ * implausible battery level never triggers a battery reason.
  */
 export type PowerProfileReason =
   | 'lowPowerMode'
@@ -64,13 +67,19 @@ export interface PowerProfile {
   profile: PowerProfileKind;
   /** Every condition pushing the profile below `full` (empty when `full`). */
   reasons: PowerProfileReason[];
-  /** Battery level 0-100; absent on devices without a battery. */
+  /** Battery level 0-100; absent on devices without a battery or when the level is unknown. */
   batteryLevel?: number;
   isCharging?: boolean;
   /** Low Power Mode / Battery Saver / `low-power` profile; absent if the OS doesn't expose it. */
   lowPowerMode?: boolean;
   /** Absent where the OS has no thermal API (Windows). */
   thermalState?: ThermalState;
+  /**
+   * Running on external power (AC adapter, USB-C charger), even when the
+   * battery isn't charging — e.g. full or held at a charge limit. Battery
+   * reasons never apply while this is `true`. Absent when the OS doesn't say.
+   */
+  onExternalPower?: boolean;
 }
 
 export interface HardwareInfo {

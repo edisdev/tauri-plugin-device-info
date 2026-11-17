@@ -43,8 +43,12 @@ all active conditions are listed in `reasons`.
 | `batteryCritical` | On battery, ≤ 20% | `saver` |
 | `batteryLow` | On battery, ≤ 40% | `balanced` |
 
-Battery reasons apply only while discharging. A device without a battery
-(most desktops) is treated as on mains power.
+Battery reasons apply only **on battery**: not charging *and* not on external
+power. A laptop on AC that is full, held at a charge limit or "not charging"
+is on external power (`onExternalPower: true`), so it never gets a battery
+reason. When a platform can't tell, the device counts as on battery. A device
+without a battery (most desktops), or one reporting an unknown or out-of-range
+level (e.g. the iOS Simulator), gets no battery reason either.
 
 ### Response
 
@@ -55,7 +59,8 @@ Battery reasons apply only while discharging. A device without a battery
   "batteryLevel": 34,
   "isCharging": false,
   "lowPowerMode": false,
-  "thermalState": "nominal"
+  "thermalState": "nominal",
+  "onExternalPower": false
 }
 ```
 
@@ -67,24 +72,28 @@ Battery reasons apply only while discharging. A device without a battery
 | `isCharging` | `boolean?` | |
 | `lowPowerMode` | `boolean?` | Absent when the OS doesn't expose it |
 | `thermalState` | `'nominal' \| 'fair' \| 'serious' \| 'critical'?` | Absent on Windows |
+| `onExternalPower` | `boolean?` | On an AC / USB-C adapter, even when not charging; absent when the OS doesn't say |
 
 The raw fields are included so you can apply your own policy if the defaults
 don't fit.
 
 ### Platform sources
 
-| Platform | Low power mode | Thermal state |
-|----------|----------------|---------------|
-| macOS | `NSProcessInfo.isLowPowerModeEnabled` (macOS 12+) | `NSProcessInfo.thermalState` |
-| iOS | `ProcessInfo.isLowPowerModeEnabled` | `ProcessInfo.thermalState` |
-| Android | `PowerManager.isPowerSaveMode` | `PowerManager.currentThermalStatus` (Android 10+) |
-| Windows | Battery / Energy Saver (`GetSystemPowerStatus`) | — |
-| Linux | ACPI platform profile = `low-power` | `/sys/class/thermal` headroom to critical trip |
+| Platform | Low power mode | Thermal state | External power |
+|----------|----------------|---------------|----------------|
+| macOS | `NSProcessInfo.isLowPowerModeEnabled` (macOS 12+) | `NSProcessInfo.thermalState` | IOKit providing power source = AC |
+| iOS | `ProcessInfo.isLowPowerModeEnabled` | `ProcessInfo.thermalState` | `UIDevice.batteryState` charging / full |
+| Android | `PowerManager.isPowerSaveMode` | `PowerManager.currentThermalStatus` (Android 10+) | Battery intent `EXTRA_PLUGGED` |
+| Windows | Battery / Energy Saver (`GetSystemPowerStatus`) | — | `GetSystemPowerStatus` `ACLineStatus` |
+| Linux | ACPI platform profile = `low-power` | CPU/SoC `/sys/class/thermal` zones, headroom to critical trip | Any online non-battery `/sys/class/power_supply` |
 
 Android's seven thermal levels are mapped onto four: `LIGHT`/`MODERATE` → `fair`,
 `SEVERE` → `serious`, `CRITICAL` and above → `critical`. On Linux, a zone within
 25 °C / 15 °C / 5 °C of its critical trip point is `fair` / `serious` /
-`critical`.
+`critical`. Only CPU/SoC zones count (`x86_pkg_temp`, `coretemp`, `k10temp`,
+`acpitz`, `cpu*`, `soc*`, ...), so battery, skin and Wi-Fi sensors with low trip
+points don't make a cool laptop read as hot; trip points below 80 °C are
+replaced by a 100 °C default.
 
 `watchPowerProfile` polls every 5 s by default (minimum 1 s); pass
 `{ intervalMs }` to change it.

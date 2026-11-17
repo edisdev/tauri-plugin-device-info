@@ -31,11 +31,32 @@ impl PowerProfileReason {
     }
 }
 
+/// Returns the battery level if it is a plausible percentage, else `None`.
+///
+/// Platforms report "unknown" in band: iOS `batteryLevel` is `-1` (→ `-100`
+/// after scaling, always on the Simulator) and Android's
+/// `BATTERY_PROPERTY_CAPACITY` is `Integer.MIN_VALUE` when unsupported. Such
+/// readings must not be mistaken for an empty battery.
+pub fn plausible_battery_level(level: Option<f32>) -> Option<f32> {
+    level.filter(|l| (0.0..=100.0).contains(l))
+}
+
+/// Whether battery thresholds should apply: the device is not charging and is
+/// not known to be on external power.
+///
+/// `is_charging` alone is not enough — a laptop on AC that is full, held at a
+/// charge limit, or "not charging" reports `false` yet is not draining.
+/// Unknown signals are treated as on battery (the conservative default).
+fn on_battery(battery: &BatteryInfo, power: &PowerState) -> bool {
+    battery.is_charging != Some(true) && power.on_external_power != Some(true)
+}
+
 /// Combines battery and power-state readings into a [`PowerProfile`].
 ///
 /// The profile is the most restrictive one implied by any active condition.
-/// Battery thresholds only apply while discharging; a device with no battery
-/// (`level == None`) is treated as on mains power.
+/// Battery thresholds only apply while running on battery (not charging and
+/// not on external power); a device with no battery or an unknown level
+/// (`level == None`, or outside 0-100) is treated as on mains power.
 pub fn power_profile(battery: &BatteryInfo, power: &PowerState) -> PowerProfile {
     let mut reasons = Vec::new();
 
@@ -50,8 +71,8 @@ pub fn power_profile(battery: &BatteryInfo, power: &PowerState) -> PowerProfile 
         Some(ThermalState::Nominal) | None => {}
     }
 
-    let discharging = battery.is_charging != Some(true);
-    if let (Some(level), true) = (battery.level, discharging) {
+    let battery_level = plausible_battery_level(battery.level);
+    if let (Some(level), true) = (battery_level, on_battery(battery, power)) {
         if level <= BATTERY_CRITICAL_LEVEL {
             reasons.push(PowerProfileReason::BatteryCritical);
         } else if level <= BATTERY_LOW_LEVEL {
@@ -68,10 +89,11 @@ pub fn power_profile(battery: &BatteryInfo, power: &PowerState) -> PowerProfile 
     PowerProfile {
         profile,
         reasons,
-        battery_level: battery.level,
+        battery_level,
         is_charging: battery.is_charging,
         low_power_mode: power.low_power_mode,
         thermal_state: power.thermal_state,
+        on_external_power: power.on_external_power,
     }
 }
 
@@ -216,6 +238,28 @@ fn tier_for_score(score: u8) -> DeviceTierKind {
     }
 }
 
+// ============================================================================
+// Composite getters
+// ============================================================================
+
+// Defined once over the platform getters, so desktop and mobile share them;
+// only `get_battery_info`, `get_power_state` and `get_hardware_info` differ.
+impl<R: tauri::Runtime> crate::DeviceInfo<R> {
+    /// Combines battery, power-saving mode and thermal state into a single
+    /// `full | balanced | saver` recommendation. See [`power_profile`].
+    pub fn get_power_profile(&self) -> crate::Result<PowerProfile> {
+        Ok(power_profile(
+            &self.get_battery_info()?,
+            &self.get_power_state()?,
+        ))
+    }
+
+    /// Classifies the device as `low | mid | high`. See [`device_tier`].
+    pub fn get_device_tier(&self) -> crate::Result<DeviceTier> {
+        Ok(device_tier(self.get_hardware_info()?))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -232,6 +276,14 @@ mod tests {
         PowerState {
             low_power_mode: low_power,
             thermal_state: thermal,
+            on_external_power: None,
+        }
+    }
+
+    fn external_power(on: Option<bool>) -> PowerState {
+        PowerState {
+            on_external_power: on,
+            ..PowerState::default()
         }
     }
 
@@ -291,6 +343,56 @@ mod tests {
     }
 
     #[test]
+    fn unknown_battery_levels_are_ignored() {
+        // iOS reports -1 * 100 when the level is unknown (always on the
+        // Simulator); Android reports Integer.MIN_VALUE when unsupported.
+        for bogus in [-100.0, -1.0, i32::MIN as f32, 100.5, f32::NAN] {
+            let p = power_profile(&battery(Some(bogus), Some(false)), &PowerState::default());
+            assert_eq!(p.profile, PowerProfileKind::Full, "level {bogus}");
+            assert!(p.reasons.is_empty(), "level {bogus}");
+            assert_eq!(p.battery_level, None, "level {bogus}");
+        }
+        // Bounds are inclusive.
+        assert_eq!(plausible_battery_level(Some(0.0)), Some(0.0));
+        assert_eq!(plausible_battery_level(Some(100.0)), Some(100.0));
+        assert_eq!(plausible_battery_level(None), None);
+    }
+
+    #[test]
+    fn external_power_suppresses_battery_reasons() {
+        // A laptop on AC that is full or held at a charge limit reports
+        // "not charging" but is not draining.
+        let at = |on| power_profile(&battery(Some(15.0), Some(false)), &external_power(on));
+
+        assert_eq!(at(Some(true)).profile, PowerProfileKind::Full);
+        assert!(at(Some(true)).reasons.is_empty());
+        assert_eq!(at(Some(true)).on_external_power, Some(true));
+        // Known to be on battery, or unknown: thresholds apply.
+        assert_eq!(at(Some(false)).profile, PowerProfileKind::Saver);
+        assert_eq!(at(None).profile, PowerProfileKind::Saver);
+    }
+
+    #[test]
+    fn external_power_does_not_hide_other_reasons() {
+        let p = power_profile(
+            &battery(Some(10.0), Some(false)),
+            &PowerState {
+                low_power_mode: Some(true),
+                thermal_state: Some(ThermalState::Fair),
+                on_external_power: Some(true),
+            },
+        );
+        assert_eq!(p.profile, PowerProfileKind::Saver);
+        assert_eq!(
+            p.reasons,
+            vec![
+                PowerProfileReason::LowPowerMode,
+                PowerProfileReason::ThermalFair
+            ]
+        );
+    }
+
+    #[test]
     fn most_restrictive_reason_wins_and_all_are_reported() {
         let p = power_profile(
             &battery(Some(35.0), Some(false)),
@@ -317,6 +419,7 @@ mod tests {
         assert_eq!(json["thermalState"], "fair");
         assert_eq!(json["lowPowerMode"], true);
         assert_eq!(json["batteryLevel"], 15.0);
+        assert!(json["onExternalPower"].is_null());
         assert_eq!(
             json["reasons"],
             serde_json::json!(["lowPowerMode", "thermalFair", "batteryCritical"])

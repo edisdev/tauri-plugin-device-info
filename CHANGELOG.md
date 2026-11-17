@@ -13,7 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `getPowerProfile()` / `watchPowerProfile()` — one `full | balanced | saver`
     recommendation combining battery level, charging state, OS power-saving mode
     (Low Power Mode, Battery Saver, Linux `low-power` profile) and thermal
-    pressure, plus the `reasons` behind it.
+    pressure, plus the `reasons` behind it. Battery thresholds apply only on
+    battery — not while charging or on external power (`onExternalPower`:
+    AC/USB-C adapter detected on macOS, Windows, Linux, iOS and Android, so a
+    laptop on AC that is full or held at a charge limit is not "low") — and an
+    unknown battery level (iOS Simulator, unsupported Android capacity) is
+    ignored rather than read as empty. On Linux only CPU/SoC thermal zones are
+    considered.
   - `getDeviceTier()` — a `low | mid | high` capability class and 0-100 score
     from memory, CPU cores and peak clock, scored against the device's form
     factor; honours Android's low-RAM flag and media performance class.
@@ -34,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   page after a webview reload) only received *future* changes, because the
   running monitor emits on change. The plugin now sends the current value to
   every new subscriber, as documented.
+- **iOS / Android: unknown battery level reported as 0%.** iOS sent `0` when
+  `batteryLevel` is unknown (always on the Simulator) and Android passed through
+  an unsupported `BATTERY_PROPERTY_CAPACITY`; `level` is now omitted instead
+  (Android falls back to the battery intent's level/scale first).
 - **iOS release builds failed to link** with `Undefined symbols:
   _init_plugin_device_info` on Xcode 27 / Swift 6.4, which hides `internal`
   symbols when merging a package's objects in release. The Swift entry point is

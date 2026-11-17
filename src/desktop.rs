@@ -25,6 +25,10 @@ mod macos;
 #[cfg(target_os = "linux")]
 mod linux;
 
+// Pure sysfs rules used by `linux`; also compiled for tests on every host.
+#[cfg(any(test, target_os = "linux"))]
+mod sysfs;
+
 // ============================================================================
 // Plugin initialization
 // ============================================================================
@@ -75,25 +79,43 @@ impl<R: Runtime> DeviceInfo<R> {
 
         #[cfg(not(target_os = "macos"))]
         {
-            let manager =
-                battery::Manager::new().map_err(|e| crate::Error::DeviceInfo(e.to_string()))?;
-            if let Some(Ok(battery)) = manager
-                .batteries()
-                .map_err(|e| crate::Error::DeviceInfo(e.to_string()))?
-                .next()
-            {
-                let level = (battery.state_of_charge().value * 100.0).round();
-                let is_charging = battery.state() == battery::State::Charging;
-                let health = format!("{:?}", battery.state_of_health().value * 100.0);
-
-                Ok(BatteryInfo {
-                    level: Some(level),
-                    is_charging: Some(is_charging),
-                    health: Some(health),
-                })
-            } else {
-                Ok(BatteryInfo::default())
+            // `battery::Manager` is `!Send` (it holds an `Rc`), so cache one per
+            // thread: the watch pollers call this every few seconds.
+            thread_local! {
+                static MANAGER: std::cell::RefCell<Option<battery::Manager>> =
+                    const { std::cell::RefCell::new(None) };
             }
+
+            MANAGER.with(|cell| {
+                let mut cached = cell.borrow_mut();
+                if cached.is_none() {
+                    // A failure is not cached, so the next call retries.
+                    *cached = Some(
+                        battery::Manager::new()
+                            .map_err(|e| crate::Error::DeviceInfo(e.to_string()))?,
+                    );
+                }
+                let Some(manager) = cached.as_ref() else {
+                    return Ok(BatteryInfo::default());
+                };
+                if let Some(Ok(battery)) = manager
+                    .batteries()
+                    .map_err(|e| crate::Error::DeviceInfo(e.to_string()))?
+                    .next()
+                {
+                    let level = (battery.state_of_charge().value * 100.0).round();
+                    let is_charging = battery.state() == battery::State::Charging;
+                    let health = format!("{:?}", battery.state_of_health().value * 100.0);
+
+                    Ok(BatteryInfo {
+                        level: Some(level),
+                        is_charging: Some(is_charging),
+                        health: Some(health),
+                    })
+                } else {
+                    Ok(BatteryInfo::default())
+                }
+            })
         }
     }
 
@@ -250,15 +272,6 @@ impl<R: Runtime> DeviceInfo<R> {
         return Ok(PowerState::default());
     }
 
-    /// Combines battery, power-saving mode and thermal state into a single
-    /// `full | balanced | saver` recommendation. See [`crate::adaptive::power_profile`].
-    pub fn get_power_profile(&self) -> crate::Result<PowerProfile> {
-        Ok(crate::adaptive::power_profile(
-            &self.get_battery_info()?,
-            &self.get_power_state()?,
-        ))
-    }
-
     /// Reads CPU and memory capability signals.
     pub fn get_hardware_info(&self) -> crate::Result<HardwareInfo> {
         use sysinfo::{CpuRefreshKind, RefreshKind, System};
@@ -296,10 +309,5 @@ impl<R: Runtime> DeviceInfo<R> {
             is_low_ram_device: None,
             media_performance_class: None,
         })
-    }
-
-    /// Classifies the device as `low | mid | high`. See [`crate::adaptive::device_tier`].
-    pub fn get_device_tier(&self) -> crate::Result<DeviceTier> {
-        Ok(crate::adaptive::device_tier(self.get_hardware_info()?))
     }
 }
