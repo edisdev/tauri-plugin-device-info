@@ -1,6 +1,10 @@
+---
+aside: false
+---
+
 # macOS
 
-![Vitals, the example app, on macOS](/DeviceInfo_macOS.gif)
+![Vitals, the example app, on macOS](/DeviceInfo_macOS.gif){.preview}
 
 ## Implementation
 

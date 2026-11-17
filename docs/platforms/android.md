@@ -1,6 +1,6 @@
 # Android
 
-![The example app on a Galaxy A17 (Android 16): the battery drops to 40% and the profile turns Balanced; thermal state, storage and the Saver simulation](/DeviceInfo_Android.gif){width=300}
+![The example app on a Galaxy A17 (Android 16): the battery drops to 40% and the profile turns Balanced; thermal state, storage and the Saver simulation](/DeviceInfo_Android.gif){.preview width=300}
 
 ## Implementation
 
