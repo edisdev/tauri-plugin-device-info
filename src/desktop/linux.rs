@@ -46,65 +46,6 @@ pub fn get_display_refresh_rate() -> Option<f64> {
     None
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn read_returns_none_for_nonexistent_file() {
-        let result = read("/nonexistent/path/to/file");
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn read_trims_whitespace() {
-        // Create a temp file with whitespace
-        use std::io::Write;
-        let temp_dir = std::env::temp_dir();
-        let temp_file = temp_dir.join("test_read_trim.txt");
-
-        {
-            let mut file = std::fs::File::create(&temp_file).unwrap();
-            writeln!(file, "  test value  ").unwrap();
-        }
-
-        let result = read(temp_file.to_str().unwrap());
-        assert_eq!(result, Some("test value".to_string()));
-
-        // Cleanup
-        let _ = std::fs::remove_file(temp_file);
-    }
-
-    #[test]
-    fn parse_xrandr_refresh_rate() {
-        // Simulated xrandr output line
-        let xrandr_line = "   1920x1080     60.00*+  59.96    59.93";
-
-        // Extract refresh rate like our function does
-        if let Some(part) = xrandr_line.split_whitespace().find(|s| s.contains('*')) {
-            let clean = part.replace("*", "").replace("+", "");
-            let rate: f64 = clean.parse().unwrap();
-            assert!((rate - 60.0).abs() < 0.01);
-        } else {
-            panic!("Failed to find refresh rate in xrandr line");
-        }
-    }
-
-    #[test]
-    fn parse_xrandr_without_plus() {
-        // Some systems show just asterisk without plus
-        let xrandr_line = "   2560x1440     144.00*  120.00    60.00";
-
-        if let Some(part) = xrandr_line.split_whitespace().find(|s| s.contains('*')) {
-            let clean = part.replace("*", "").replace("+", "");
-            let rate: f64 = clean.parse().unwrap();
-            assert!((rate - 144.0).abs() < 0.01);
-        } else {
-            panic!("Failed to find refresh rate");
-        }
-    }
-}
-
 // ============================================================================
 // Power state
 // ============================================================================
@@ -247,5 +188,59 @@ mod tests {
             thermal_state_from_zones(&zones),
             Some(ThermalState::Serious)
         );
+    }
+
+    #[test]
+    fn read_returns_none_for_nonexistent_file() {
+        let result = read("/nonexistent/path/to/file");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn read_trims_whitespace() {
+        // Create a temp file with whitespace
+        use std::io::Write;
+        let temp_dir = std::env::temp_dir();
+        let temp_file = temp_dir.join("test_read_trim.txt");
+
+        {
+            let mut file = std::fs::File::create(&temp_file).unwrap();
+            writeln!(file, "  test value  ").unwrap();
+        }
+
+        let result = read(temp_file.to_str().unwrap());
+        assert_eq!(result, Some("test value".to_string()));
+
+        // Cleanup
+        let _ = std::fs::remove_file(temp_file);
+    }
+
+    #[test]
+    fn parse_xrandr_refresh_rate() {
+        // Simulated xrandr output line
+        let xrandr_line = "   1920x1080     60.00*+  59.96    59.93";
+
+        // Extract refresh rate like our function does
+        if let Some(part) = xrandr_line.split_whitespace().find(|s| s.contains('*')) {
+            let clean = part.replace("*", "").replace("+", "");
+            let rate: f64 = clean.parse().unwrap();
+            assert!((rate - 60.0).abs() < 0.01);
+        } else {
+            panic!("Failed to find refresh rate in xrandr line");
+        }
+    }
+
+    #[test]
+    fn parse_xrandr_without_plus() {
+        // Some systems show just asterisk without plus
+        let xrandr_line = "   2560x1440     144.00*  120.00    60.00";
+
+        if let Some(part) = xrandr_line.split_whitespace().find(|s| s.contains('*')) {
+            let clean = part.replace("*", "").replace("+", "");
+            let rate: f64 = clean.parse().unwrap();
+            assert!((rate - 144.0).abs() < 0.01);
+        } else {
+            panic!("Failed to find refresh rate");
+        }
     }
 }
