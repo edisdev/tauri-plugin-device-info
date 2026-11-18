@@ -15,14 +15,14 @@ exclude = ["/examples", "/docs", "/dist-js", "/guest-js", "/node_modules"]
 links = "tauri-plugin-device-info"
 
 [dependencies]
-tauri = { version = "2.7.0" }
+tauri = { version = "2.12" }
 serde = "1.0"
 thiserror = "2"
 serde_json = "1.0"
 # Desktop implementations use these crates; mobile uses the native Swift/Kotlin plugin.
 [target.'cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))'.dependencies]
 sysinfo = "0.40"
-local-ip-address = "0.6.9"
+local-ip-address = "0.6.13"
 netdev = "0.47"
 
 [target.'cfg(target_os = "windows")'.dependencies]
@@ -40,11 +40,11 @@ libc = "0.2"
 starship-battery = "0.12"
 
 [build-dependencies]
-tauri-plugin = { version = "2.5.2", features = ["build"] }
+tauri-plugin = { version = "2.7", features = ["build"] }
 
 # Tauri's `test` feature (the mock runtime) fails to load on Windows CI with
 # STATUS_ENTRYPOINT_NOT_FOUND (0xc0000139), so enable it only off Windows. The
 # mock-based watcher tests are gated to match; the pure-logic tests still run
 # on every platform.
 [target.'cfg(not(target_os = "windows"))'.dev-dependencies]
-tauri = { version = "2.7.0", features = ["test"] }
+tauri = { version = "2.12", features = ["test"] }
