@@ -122,7 +122,7 @@ impl<R: Runtime> DeviceInfo<R> {
     /// Gets the MAC address of the default network interface (the one used for internet access).
     /// Uses the system's routing table to find the correct interface.
     pub fn get_default_mac_address() -> String {
-        use default_net::get_default_interface;
+        use netdev::get_default_interface;
         match get_default_interface() {
             Ok(interface) => match interface.mac_addr {
                 Some(mac) => mac.to_string(),
