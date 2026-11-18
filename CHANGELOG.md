@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-11-19
+
+### Fixed
+
+- **MAC address could change after upgrading to 1.3.0** (Windows, macOS,
+  Linux). 1.3.0 picked the "default" network interface through a route to
+  `10.254.254.254` (the `netdev` crate's method) instead of `1.1.1.1:80`. On
+  machines with a separate route to 10.0.0.0/8, such as a second network card
+  for a POS network, a split-tunnel VPN, or some Docker or Hyper-V networks, it
+  could pick a different card and report a different MAC than 1.2.x. The
+  interface is chosen through `1.1.1.1:80` again, exactly as before 1.3.0. If
+  you derive an identity from the MAC address, skip 1.3.0.
+
 ## [1.3.0] - 2026-11-18
 
 ### Changed
@@ -148,6 +161,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `getStorageInfo`, and `getDisplayInfo` across Windows, macOS, Linux, iOS, and
   Android.
 
+[1.3.1]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.3.1
 [1.3.0]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.3.0
 [1.2.0]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.2.0
 [1.1.1]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.1.1
