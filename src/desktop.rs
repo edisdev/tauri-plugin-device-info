@@ -148,15 +148,17 @@ impl<R: Runtime> DeviceInfo<R> {
 
         let mut network_type = Some("unknown".to_string());
 
-        if let Some(target_ip) = ip_addr {
-            let networks = sysinfo::Networks::new_with_refreshed_list();
-
+        // A failed interface listing leaves the type as "unknown".
+        let networks = ip_addr.zip(sysinfo::Networks::new_with_refreshed_list().ok());
+        if let Some((target_ip, networks)) = networks {
             if let Some((name, _)) = networks.iter().find(|(_, network)| {
                 network
                     .ip_networks()
                     .iter()
                     .any(|net| net.addr == target_ip)
             }) {
+                // Interface names are OS strings since sysinfo 0.40.
+                let name = name.to_string_lossy();
                 let name_lower = name.to_lowercase();
                 if name_lower.contains("wifi") || name_lower.contains("wl") {
                     network_type = Some("wifi".to_string());
@@ -188,7 +190,9 @@ impl<R: Runtime> DeviceInfo<R> {
     /// - `free_space`: Available disk space in bytes
     /// - `storage_type`: Disk type (SSD, HDD, etc.)
     pub fn get_storage_info(&self) -> crate::Result<StorageInfo> {
-        let disks = sysinfo::Disks::new_with_refreshed_list();
+        let Ok(disks) = sysinfo::Disks::new_with_refreshed_list() else {
+            return Ok(StorageInfo::default());
+        };
 
         // Find the main system disk
         // Unix/Mac: root is "/"
@@ -280,7 +284,8 @@ impl<R: Runtime> DeviceInfo<R> {
             RefreshKind::nothing()
                 .with_memory(sysinfo::MemoryRefreshKind::nothing().with_ram())
                 .with_cpu(CpuRefreshKind::nothing().with_frequency()),
-        );
+        )
+        .map_err(|e| crate::Error::DeviceInfo(e.to_string()))?;
 
         let cpus = sys.cpus();
         // sysinfo reports nonsense on some CPUs (e.g. `4` on Apple Silicon), so
@@ -298,7 +303,7 @@ impl<R: Runtime> DeviceInfo<R> {
 
         Ok(HardwareInfo {
             cpu_cores: (!cpus.is_empty()).then_some(cpus.len() as u32),
-            physical_cores: System::physical_core_count().map(|c| c as u32),
+            physical_cores: System::physical_core_count().ok().map(|c| c as u32),
             cpu_model: cpus
                 .first()
                 .map(|c| c.brand().trim().to_string())

@@ -14,7 +14,7 @@ fn run_system_profiler(data_type: &str) -> Option<serde_json::Value> {
 }
 
 pub fn get_device_info() -> crate::Result<DeviceInfoResponse> {
-    let hostname = System::host_name().unwrap_or_else(|| "Unknown Device".to_string());
+    let hostname = System::host_name().unwrap_or_else(|_| "Unknown Device".to_string());
 
     if let Some(v) = run_system_profiler("SPHardwareDataType") {
         if let Some(h) = v.get("SPHardwareDataType").and_then(|v| v.get(0)) {
