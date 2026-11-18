@@ -4,9 +4,21 @@
 
 ### Using Tauri CLI (Recommended)
 
-```bash
+::: code-group
+
+```bash [npm]
+npm run tauri add device-info
+```
+
+```bash [pnpm]
+pnpm tauri add device-info
+```
+
+```bash [yarn]
 yarn tauri add device-info
 ```
+
+:::
 
 ### Manual Installation
 
@@ -20,9 +32,21 @@ tauri-plugin-device-info = "1.2"  # See https://crates.io/crates/tauri-plugin-de
 
 **2. Add the JavaScript package:**
 
-```bash
+::: code-group
+
+```bash [npm]
+npm install tauri-plugin-device-info-api
+```
+
+```bash [pnpm]
+pnpm add tauri-plugin-device-info-api
+```
+
+```bash [yarn]
 yarn add tauri-plugin-device-info-api
 ```
+
+:::
 
 ## Setup
 

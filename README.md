@@ -60,6 +60,8 @@ A comprehensive Tauri plugin to access device information including Battery, Net
 ```bash
 npm run tauri add device-info
 # or
+pnpm tauri add device-info
+# or
 yarn tauri add device-info
 ```
 
@@ -468,7 +470,7 @@ cargo fmt -- --check
 cargo clippy -- -D warnings
 
 # JavaScript type check
-yarn tsc --noEmit
+pnpm exec tsc --noEmit
 ```
 
 ## Changelog
