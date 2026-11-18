@@ -1,6 +1,6 @@
 use crate::models::DeviceInfoResponse;
 use serde::Deserialize;
-use wmi::{COMLibrary, WMIConnection};
+use wmi::WMIConnection;
 
 #[derive(Deserialize, Debug)]
 struct Win32ComputerSystem {
@@ -28,8 +28,8 @@ struct Win32BIOS {
 
 pub fn get_device_info() -> crate::Result<DeviceInfoResponse> {
     let result = (|| -> Option<DeviceInfoResponse> {
-        let com_lib = COMLibrary::new().ok()?;
-        let wmi_connection = WMIConnection::new(com_lib).ok()?;
+        // wmi 0.18 initializes COM itself when the thread hasn't.
+        let wmi_connection = WMIConnection::new().ok()?;
 
         let computer_systems: Vec<Win32ComputerSystem> = wmi_connection
             .raw_query("SELECT Manufacturer, Model, Name FROM Win32_ComputerSystem")
@@ -75,8 +75,7 @@ struct Win32VideoController {
 }
 
 pub fn get_display_refresh_rate() -> Option<f64> {
-    let com_lib = COMLibrary::new().ok()?;
-    let wmi_connection = WMIConnection::new(com_lib).ok()?;
+    let wmi_connection = WMIConnection::new().ok()?;
 
     let results: Vec<Win32VideoController> = wmi_connection
         .raw_query("SELECT CurrentRefreshRate FROM Win32_VideoController")
@@ -190,7 +189,7 @@ mod tests {
         let bios_serial: Option<String> = None;
         let product_id: Option<String> = Some("PRODUCT-ID".to_string());
 
-        let serial = bios_serial.or_else(|| product_id);
+        let serial = bios_serial.or(product_id);
         assert_eq!(serial, Some("PRODUCT-ID".to_string()));
     }
 
