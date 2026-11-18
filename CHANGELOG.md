@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-18
+
+### Changed
+
+- **Minimum versions:** the plugin now requires Tauri **2.12** (`tauri`
+  crate) and `@tauri-apps/api` **^2.12.5**.
+- **Dependencies:**
+  - `sysinfo` 0.40, `wmi` 0.18 (Windows), and the other dependencies
+    updated within range.
+  - Apple Silicon: `sysinfo` now reads the CPU clock, so the device tier
+    score can rise slightly (an M5 Pro moves from 90 to 92).
+- **Mobile builds:** desktop-only crates (`sysinfo`, `local-ip-address`, the
+  network crate) are no longer compiled for iOS and Android
+  ([#7](https://github.com/edisdev/tauri-plugin-device-info/pull/7)).
+- **Package manager:** the repository uses pnpm instead of yarn. Install
+  commands in the docs show npm, pnpm and yarn.
+
+### Fixed
+
+- **Unmaintained crates replaced:**
+  - `battery` is replaced by `starship-battery`, its maintained fork, on
+    Windows and Linux. On macOS it was never used and is no longer compiled.
+  - `default-net` is replaced by `netdev`, its successor.
+- **Security advisories:** no known advisories remain in the JS
+  dependencies of the plugin, the docs or the example app.
+
 ## [1.2.0] - 2026-11-17
 
 ### Added
@@ -122,6 +148,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `getStorageInfo`, and `getDisplayInfo` across Windows, macOS, Linux, iOS, and
   Android.
 
+[1.3.0]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.3.0
 [1.2.0]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.2.0
 [1.1.1]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.1.1
 [1.1.0]: https://github.com/edisdev/tauri-plugin-device-info/releases/tag/v1.1.0

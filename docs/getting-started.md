@@ -27,7 +27,7 @@ yarn tauri add device-info
 ```toml
 # src-tauri/Cargo.toml
 [dependencies]
-tauri-plugin-device-info = "1.2"  # See https://crates.io/crates/tauri-plugin-device-info for latest
+tauri-plugin-device-info = "1.3"  # See https://crates.io/crates/tauri-plugin-device-info for latest
 ```
 
 **2. Add the JavaScript package:**
