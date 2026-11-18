@@ -8,6 +8,7 @@
 //! Each platform has its own submodule with platform-specific implementations.
 
 use serde::de::DeserializeOwned;
+use std::net::IpAddr;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
 use crate::models::*;
@@ -119,17 +120,29 @@ impl<R: Runtime> DeviceInfo<R> {
         }
     }
 
-    /// Gets the MAC address of the default network interface (the one used for internet access).
-    /// Uses the system's routing table to find the correct interface.
+    /// Gets the MAC address of the network interface used for internet access.
+    ///
+    /// The interface is the one that owns the local address the OS picks for a
+    /// UDP "connection" to 1.1.1.1:80 — exactly how `default-net` chose it
+    /// before 1.3.0. `netdev::get_default_interface()` probes 10.254.254.254
+    /// instead, which picks a different card on machines with a separate route
+    /// to 10.0.0.0/8 (a POS network card, a split-tunnel VPN) and would change
+    /// the MAC, and any identity derived from it.
     pub fn get_default_mac_address() -> String {
-        use netdev::get_default_interface;
-        match get_default_interface() {
-            Ok(interface) => match interface.mac_addr {
-                Some(mac) => mac.to_string(),
-                None => "00:00:00:00:00:00".to_string(),
-            },
-            Err(_) => "00:00:00:00:00:00".to_string(),
-        }
+        internet_route_local_ip()
+            .and_then(|local_ip| {
+                let interfaces = netdev::get_interfaces().into_iter().map(|iface| {
+                    let addrs = iface
+                        .ipv4
+                        .iter()
+                        .map(|net| IpAddr::V4(net.addr()))
+                        .chain(iface.ipv6.iter().map(|net| IpAddr::V6(net.addr())))
+                        .collect::<Vec<_>>();
+                    (addrs, iface.mac_addr.map(|mac| mac.to_string()))
+                });
+                mac_for_local_ip(interfaces, local_ip)
+            })
+            .unwrap_or_else(|| NO_MAC.to_string())
     }
 
     /// Retrieves network information including IP address, network type, and MAC address.
@@ -314,5 +327,77 @@ impl<R: Runtime> DeviceInfo<R> {
             is_low_ram_device: None,
             media_performance_class: None,
         })
+    }
+}
+
+/// What `get_default_mac_address` reports when no interface or MAC is found.
+const NO_MAC: &str = "00:00:00:00:00:00";
+
+/// The local address the OS would use to reach the internet (1.1.1.1:80).
+/// Nothing is sent: connecting a UDP socket only selects a route.
+fn internet_route_local_ip() -> Option<IpAddr> {
+    let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
+    socket.connect("1.1.1.1:80").ok()?;
+    socket.local_addr().ok().map(|addr| addr.ip())
+}
+
+/// The MAC of the first interface that owns `local_ip`, given each interface
+/// as (its addresses, its MAC). `None` when no interface owns the address or
+/// the owner has no MAC — the same outcomes `default-net` had.
+fn mac_for_local_ip<I>(interfaces: I, local_ip: IpAddr) -> Option<String>
+where
+    I: IntoIterator<Item = (Vec<IpAddr>, Option<String>)>,
+{
+    interfaces
+        .into_iter()
+        .find(|(addrs, _)| addrs.contains(&local_ip))
+        .and_then(|(_, mac)| mac)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ip(s: &str) -> IpAddr {
+        s.parse().unwrap()
+    }
+
+    /// A POS card on 10.x listed before the internet card must not win: the
+    /// choice follows the internet route's local address only.
+    #[test]
+    fn picks_the_interface_that_owns_the_internet_route_address() {
+        let interfaces = vec![
+            (vec![ip("10.20.0.5")], Some("aa:aa:aa:aa:aa:aa".to_string())),
+            (
+                vec![ip("192.168.1.20")],
+                Some("bb:bb:bb:bb:bb:bb".to_string()),
+            ),
+        ];
+        assert_eq!(
+            mac_for_local_ip(interfaces, ip("192.168.1.20")),
+            Some("bb:bb:bb:bb:bb:bb".to_string())
+        );
+    }
+
+    #[test]
+    fn unknown_address_or_missing_mac_gives_none() {
+        let interfaces = vec![(vec![ip("192.168.1.20")], None)];
+        assert_eq!(
+            mac_for_local_ip(interfaces.clone(), ip("192.168.1.20")),
+            None
+        );
+        assert_eq!(mac_for_local_ip(interfaces, ip("10.0.0.1")), None);
+    }
+
+    #[test]
+    fn ipv6_addresses_are_matched_too() {
+        let interfaces = vec![(
+            vec![ip("fe80::1"), ip("2001:db8::7")],
+            Some("cc:cc:cc:cc:cc:cc".to_string()),
+        )];
+        assert_eq!(
+            mac_for_local_ip(interfaces, ip("2001:db8::7")),
+            Some("cc:cc:cc:cc:cc:cc".to_string())
+        );
     }
 }
