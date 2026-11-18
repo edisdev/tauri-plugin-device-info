@@ -1,6 +1,7 @@
 {
   "name": "tauri-plugin-device-info-api",
-  "version": "1.2.0",
+  "version": "1.3.0",
+  "packageManager": "pnpm@11.8.0",
   "author": "edisdev<edisdev14@gmail.com>",
   "description": "A Tauri plugin to access device information.",
   "license": "MIT",
@@ -50,20 +51,21 @@
   ],
   "files": [
     "dist-js",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "rollup -c",
-    "prepublishOnly": "yarn build",
-    "pretest": "yarn build"
+    "prepublishOnly": "pnpm build",
+    "pretest": "pnpm build"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.0.0"
+    "@tauri-apps/api": "^2.12.5"
   },
   "devDependencies": {
-    "@rollup/plugin-typescript": "^12.0.0",
-    "rollup": "^4.9.6",
-    "typescript": "^5.3.3",
-    "tslib": "^2.6.2"
+    "@rollup/plugin-typescript": "^12.3.1",
+    "rollup": "^4.68.5",
+    "tslib": "^2.9.1",
+    "typescript": "^5.9.3"
   }
 }

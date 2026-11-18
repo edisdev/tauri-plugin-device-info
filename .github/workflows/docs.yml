@@ -26,20 +26,22 @@ jobs:
         with:
           fetch-depth: 0
       
+      - uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: 'yarn'
-          cache-dependency-path: docs/yarn.lock
+          cache: 'pnpm'
+          cache-dependency-path: docs/pnpm-lock.yaml
       
       - name: Install dependencies
         working-directory: docs
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       
       - name: Build docs
         working-directory: docs
-        run: yarn build
+        run: pnpm build
       
       - name: Setup Pages
         uses: actions/configure-pages@v4

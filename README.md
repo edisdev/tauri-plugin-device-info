@@ -60,6 +60,8 @@ A comprehensive Tauri plugin to access device information including Battery, Net
 ```bash
 npm run tauri add device-info
 # or
+pnpm tauri add device-info
+# or
 yarn tauri add device-info
 ```
 
@@ -69,7 +71,7 @@ yarn tauri add device-info
 
 ```toml
 [dependencies]
-tauri-plugin-device-info = "1.2"  # Check crates.io for latest version
+tauri-plugin-device-info = "1.3"  # Check crates.io for latest version
 # or from git
 tauri-plugin-device-info = { git = "https://github.com/edisdev/tauri-plugin-device-info" }
 ```
@@ -79,7 +81,7 @@ tauri-plugin-device-info = { git = "https://github.com/edisdev/tauri-plugin-devi
 ```json
 {
   "dependencies": {
-    "tauri-plugin-device-info-api": "^1.2.0"
+    "tauri-plugin-device-info-api": "^1.3.0"
   }
 }
 ```
@@ -468,7 +470,7 @@ cargo fmt -- --check
 cargo clippy -- -D warnings
 
 # JavaScript type check
-yarn tsc --noEmit
+pnpm exec tsc --noEmit
 ```
 
 ## Changelog

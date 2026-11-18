@@ -45,17 +45,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: 'yarn'
+          cache: 'pnpm'
       
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       
       - name: Build
-        run: yarn build
+        run: pnpm build
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
