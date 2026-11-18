@@ -79,10 +79,10 @@ impl<R: Runtime> DeviceInfo<R> {
 
         #[cfg(not(target_os = "macos"))]
         {
-            // `battery::Manager` is `!Send` (it holds an `Rc`), so cache one per
+            // `starship_battery::Manager` is `!Send` (it holds an `Rc`), so cache one per
             // thread: the watch pollers call this every few seconds.
             thread_local! {
-                static MANAGER: std::cell::RefCell<Option<battery::Manager>> =
+                static MANAGER: std::cell::RefCell<Option<starship_battery::Manager>> =
                     const { std::cell::RefCell::new(None) };
             }
 
@@ -91,7 +91,7 @@ impl<R: Runtime> DeviceInfo<R> {
                 if cached.is_none() {
                     // A failure is not cached, so the next call retries.
                     *cached = Some(
-                        battery::Manager::new()
+                        starship_battery::Manager::new()
                             .map_err(|e| crate::Error::DeviceInfo(e.to_string()))?,
                     );
                 }
@@ -104,7 +104,7 @@ impl<R: Runtime> DeviceInfo<R> {
                     .next()
                 {
                     let level = (battery.state_of_charge().value * 100.0).round();
-                    let is_charging = battery.state() == battery::State::Charging;
+                    let is_charging = battery.state() == starship_battery::State::Charging;
                     let health = format!("{:?}", battery.state_of_health().value * 100.0);
 
                     Ok(BatteryInfo {
