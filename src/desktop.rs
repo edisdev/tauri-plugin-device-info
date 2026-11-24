@@ -138,20 +138,20 @@ impl<R: Runtime> DeviceInfo<R> {
                         .map(|net| IpAddr::V4(net.addr()))
                         .chain(iface.ipv6.iter().map(|net| IpAddr::V6(net.addr())))
                         .collect::<Vec<_>>();
-                    let mac = iface.mac_addr.map(|mac| mac.to_string());
-                    // macOS 27.2+ hides link-layer addresses from third-party
-                    // processes: getifaddrs/sysctl/ioctl all report
-                    // 02:00:00:00:00:00. IOKit still has the real one.
-                    #[cfg(target_os = "macos")]
-                    let mac = match mac {
-                        Some(m) if m == MASKED_MAC => {
-                            macos::hardware_mac_address(&iface.name).or(Some(m))
-                        }
-                        other => other,
-                    };
-                    (addrs, mac)
+                    (
+                        addrs,
+                        (iface.name, iface.mac_addr.map(|mac| mac.to_string())),
+                    )
                 });
-                mac_for_local_ip(interfaces, local_ip)
+                owner_of_local_ip(interfaces, local_ip)
+            })
+            .and_then(|(_name, mac)| {
+                // macOS 27.2+ masks the MAC; ask IOKit for the chosen
+                // interface only, after the selection.
+                #[cfg(target_os = "macos")]
+                let mac =
+                    mac.map(|mac| macos::unmask_mac(mac, || macos::hardware_mac_address(&_name)));
+                mac
             })
             .unwrap_or_else(|| NO_MAC.to_string())
     }
@@ -344,10 +344,6 @@ impl<R: Runtime> DeviceInfo<R> {
 /// What `get_default_mac_address` reports when no interface or MAC is found.
 const NO_MAC: &str = "00:00:00:00:00:00";
 
-/// The placeholder macOS 27.2+ reports instead of a real link-layer address.
-#[cfg(target_os = "macos")]
-const MASKED_MAC: &str = "02:00:00:00:00:00";
-
 /// The local address the OS would use to reach the internet (1.1.1.1:80).
 /// Nothing is sent: connecting a UDP socket only selects a route.
 fn internet_route_local_ip() -> Option<IpAddr> {
@@ -356,17 +352,17 @@ fn internet_route_local_ip() -> Option<IpAddr> {
     socket.local_addr().ok().map(|addr| addr.ip())
 }
 
-/// The MAC of the first interface that owns `local_ip`, given each interface
-/// as (its addresses, its MAC). `None` when no interface owns the address or
-/// the owner has no MAC — the same outcomes `default-net` had.
-fn mac_for_local_ip<I>(interfaces: I, local_ip: IpAddr) -> Option<String>
+/// The data of the first interface that owns `local_ip`, given each interface
+/// as (its addresses, its data). `None` when no interface owns the address —
+/// together with a missing MAC, the same outcomes `default-net` had.
+fn owner_of_local_ip<I, T>(interfaces: I, local_ip: IpAddr) -> Option<T>
 where
-    I: IntoIterator<Item = (Vec<IpAddr>, Option<String>)>,
+    I: IntoIterator<Item = (Vec<IpAddr>, T)>,
 {
     interfaces
         .into_iter()
         .find(|(addrs, _)| addrs.contains(&local_ip))
-        .and_then(|(_, mac)| mac)
+        .map(|(_, data)| data)
 }
 
 #[cfg(test)]
@@ -389,19 +385,22 @@ mod tests {
             ),
         ];
         assert_eq!(
-            mac_for_local_ip(interfaces, ip("192.168.1.20")),
+            owner_of_local_ip(interfaces, ip("192.168.1.20")).flatten(),
             Some("bb:bb:bb:bb:bb:bb".to_string())
         );
     }
 
     #[test]
     fn unknown_address_or_missing_mac_gives_none() {
-        let interfaces = vec![(vec![ip("192.168.1.20")], None)];
+        let interfaces: Vec<(_, Option<String>)> = vec![(vec![ip("192.168.1.20")], None)];
         assert_eq!(
-            mac_for_local_ip(interfaces.clone(), ip("192.168.1.20")),
+            owner_of_local_ip(interfaces.clone(), ip("192.168.1.20")).flatten(),
             None
         );
-        assert_eq!(mac_for_local_ip(interfaces, ip("10.0.0.1")), None);
+        assert_eq!(
+            owner_of_local_ip(interfaces, ip("10.0.0.1")).flatten(),
+            None
+        );
     }
 
     #[test]
@@ -411,7 +410,7 @@ mod tests {
             Some("cc:cc:cc:cc:cc:cc".to_string()),
         )];
         assert_eq!(
-            mac_for_local_ip(interfaces, ip("2001:db8::7")),
+            owner_of_local_ip(interfaces, ip("2001:db8::7")).flatten(),
             Some("cc:cc:cc:cc:cc:cc".to_string())
         );
     }

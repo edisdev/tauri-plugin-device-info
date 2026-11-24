@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   On Wi-Fi with **Private Wi-Fi Address** turned on, macOS before 27.2 reported
   the per-network private address; on 27.2+ the plugin reports the card's
   fixed hardware address instead. If you derive an identity from the MAC
-  address, expect it to differ from what 27.1 reported on such networks.
+  address, expect it to differ from what earlier macOS versions reported on
+  such networks.
 
 ## [1.3.1] - 2026-11-19
 

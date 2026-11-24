@@ -178,6 +178,20 @@ fn providing_power_source() -> Option<String> {
     }
 }
 
+/// The placeholder macOS 27.2+ reports instead of a real link-layer address.
+const MASKED_MAC: &str = "02:00:00:00:00:00";
+
+/// Replaces the macOS 27.2+ placeholder with the address `hardware_mac`
+/// finds. A real address is returned as is, without calling `hardware_mac`;
+/// the placeholder stays when `hardware_mac` finds nothing.
+pub fn unmask_mac(mac: String, hardware_mac: impl FnOnce() -> Option<String>) -> String {
+    if mac == MASKED_MAC {
+        hardware_mac().unwrap_or(mac)
+    } else {
+        mac
+    }
+}
+
 /// The hardware MAC address of a BSD interface (`en0`, ...), read from the
 /// `IOMACAddress` property of its IOKit network controller.
 ///
@@ -291,6 +305,41 @@ fn power_source_is_external(kind: &str) -> Option<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn masked_mac_is_replaced_by_the_hardware_address() {
+        assert_eq!(
+            unmask_mac(MASKED_MAC.to_string(), || Some("fc:b2:14:ac:e1:35".into())),
+            "fc:b2:14:ac:e1:35"
+        );
+    }
+
+    #[test]
+    fn masked_mac_stays_when_iokit_finds_nothing() {
+        assert_eq!(unmask_mac(MASKED_MAC.to_string(), || None), MASKED_MAC);
+    }
+
+    #[test]
+    fn real_mac_does_not_query_iokit() {
+        assert_eq!(
+            unmask_mac("2e:9f:c7:a0:ee:8b".to_string(), || {
+                panic!("IOKit must not be queried for a real address")
+            }),
+            "2e:9f:c7:a0:ee:8b"
+        );
+    }
+
+    /// Smoke test against the real IOKit registry. `lo0` has no hardware
+    /// address; `en0` may be missing on a CI VM, but if IOKit reports one it
+    /// must be a real address, not the placeholder.
+    #[test]
+    fn iokit_lookup_smoke_test() {
+        assert_eq!(hardware_mac_address("lo0"), None);
+        if let Some(mac) = hardware_mac_address("en0") {
+            assert_ne!(mac, MASKED_MAC);
+            assert_eq!(mac.len(), 17);
+        }
+    }
 
     #[test]
     fn mac_bytes_are_formatted_like_netdev() {
