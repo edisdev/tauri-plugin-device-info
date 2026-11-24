@@ -423,14 +423,6 @@ mod tests {
     }
 
     #[test]
-    fn fallback_hostname_works() {
-        // Test that unwrap_or_else provides fallback
-        let hostname: Option<String> = None;
-        let result = hostname.unwrap_or_else(|| "Unknown Device".to_string());
-        assert_eq!(result, "Unknown Device");
-    }
-
-    #[test]
     fn manufacturer_is_always_apple() {
         // All Macs should report Apple Inc.
         let manufacturer = Some("Apple Inc.".to_string());
