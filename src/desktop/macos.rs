@@ -178,6 +178,106 @@ fn providing_power_source() -> Option<String> {
     }
 }
 
+/// The hardware MAC address of a BSD interface (`en0`, ...), read from the
+/// `IOMACAddress` property of its IOKit network controller.
+///
+/// macOS 27.2 masks link-layer addresses as `02:00:00:00:00:00` in
+/// getifaddrs, sysctl and ioctl for third-party processes; IOKit still
+/// reports the real address. `None` when the interface has no IOKit entry
+/// (`utun`, `bridge`, ...) or no MAC.
+pub fn hardware_mac_address(bsd_name: &str) -> Option<String> {
+    use std::ffi::{c_char, c_void, CString};
+
+    #[link(name = "IOKit", kind = "framework")]
+    extern "C" {
+        fn IOBSDNameMatching(main_port: u32, options: u32, bsd_name: *const c_char) -> *mut c_void;
+        fn IOServiceGetMatchingService(main_port: u32, matching: *mut c_void) -> u32;
+        fn IORegistryEntrySearchCFProperty(
+            entry: u32,
+            plane: *const c_char,
+            key: *const c_void,
+            allocator: *const c_void,
+            options: u32,
+        ) -> *const c_void;
+        fn IOObjectRelease(object: u32) -> i32;
+    }
+    #[link(name = "CoreFoundation", kind = "framework")]
+    extern "C" {
+        fn CFStringCreateWithCString(
+            allocator: *const c_void,
+            c_str: *const c_char,
+            encoding: u32,
+        ) -> *const c_void;
+        fn CFGetTypeID(cf: *const c_void) -> usize;
+        fn CFDataGetTypeID() -> usize;
+        fn CFDataGetLength(data: *const c_void) -> isize;
+        fn CFDataGetBytePtr(data: *const c_void) -> *const u8;
+        fn CFRelease(cf: *const c_void);
+    }
+    const CF_STRING_ENCODING_UTF8: u32 = 0x0800_0100;
+    const K_IO_MAIN_PORT_DEFAULT: u32 = 0;
+    // kIORegistryIterateRecursively | kIORegistryIterateParents: the MAC lives
+    // on the controller, a parent of the interface entry.
+    const SEARCH_PARENTS: u32 = 0x1 | 0x2;
+
+    let name = CString::new(bsd_name).ok()?;
+    // SAFETY: the matching dictionary is consumed by
+    // IOServiceGetMatchingService; the service, key and property follow the
+    // Create/Copy rule and are released below. The data bytes are copied out
+    // before the property is released.
+    unsafe {
+        let matching = IOBSDNameMatching(K_IO_MAIN_PORT_DEFAULT, 0, name.as_ptr());
+        if matching.is_null() {
+            return None;
+        }
+        let service = IOServiceGetMatchingService(K_IO_MAIN_PORT_DEFAULT, matching);
+        if service == 0 {
+            return None;
+        }
+        let key = CFStringCreateWithCString(
+            std::ptr::null(),
+            c"IOMACAddress".as_ptr(),
+            CF_STRING_ENCODING_UTF8,
+        );
+        let data = if key.is_null() {
+            std::ptr::null()
+        } else {
+            IORegistryEntrySearchCFProperty(
+                service,
+                c"IOService".as_ptr(),
+                key,
+                std::ptr::null(),
+                SEARCH_PARENTS,
+            )
+        };
+        let mac = (!data.is_null() && CFGetTypeID(data) == CFDataGetTypeID())
+            .then(|| {
+                std::slice::from_raw_parts(CFDataGetBytePtr(data), CFDataGetLength(data) as usize)
+                    .to_vec()
+            })
+            .and_then(|bytes| format_mac(&bytes));
+        if !data.is_null() {
+            CFRelease(data);
+        }
+        if !key.is_null() {
+            CFRelease(key);
+        }
+        IOObjectRelease(service);
+        mac
+    }
+}
+
+/// Formats a 6-byte MAC as `aa:bb:cc:dd:ee:ff`, the format `netdev` uses.
+fn format_mac(bytes: &[u8]) -> Option<String> {
+    (bytes.len() == 6).then(|| {
+        bytes
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<Vec<_>>()
+            .join(":")
+    })
+}
+
 /// Maps an IOKit providing-power-source type to "on external power".
 fn power_source_is_external(kind: &str) -> Option<bool> {
     match kind {
@@ -191,6 +291,15 @@ fn power_source_is_external(kind: &str) -> Option<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mac_bytes_are_formatted_like_netdev() {
+        assert_eq!(
+            format_mac(&[0xfc, 0xb2, 0x14, 0x0a, 0xe1, 0x35]).as_deref(),
+            Some("fc:b2:14:0a:e1:35")
+        );
+        assert_eq!(format_mac(&[1, 2, 3]), None);
+    }
 
     #[test]
     fn power_source_type_maps_to_external_power() {

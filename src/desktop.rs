@@ -138,7 +138,18 @@ impl<R: Runtime> DeviceInfo<R> {
                         .map(|net| IpAddr::V4(net.addr()))
                         .chain(iface.ipv6.iter().map(|net| IpAddr::V6(net.addr())))
                         .collect::<Vec<_>>();
-                    (addrs, iface.mac_addr.map(|mac| mac.to_string()))
+                    let mac = iface.mac_addr.map(|mac| mac.to_string());
+                    // macOS 27.2+ hides link-layer addresses from third-party
+                    // processes: getifaddrs/sysctl/ioctl all report
+                    // 02:00:00:00:00:00. IOKit still has the real one.
+                    #[cfg(target_os = "macos")]
+                    let mac = match mac {
+                        Some(m) if m == MASKED_MAC => {
+                            macos::hardware_mac_address(&iface.name).or(Some(m))
+                        }
+                        other => other,
+                    };
+                    (addrs, mac)
                 });
                 mac_for_local_ip(interfaces, local_ip)
             })
@@ -332,6 +343,10 @@ impl<R: Runtime> DeviceInfo<R> {
 
 /// What `get_default_mac_address` reports when no interface or MAC is found.
 const NO_MAC: &str = "00:00:00:00:00:00";
+
+/// The placeholder macOS 27.2+ reports instead of a real link-layer address.
+#[cfg(target_os = "macos")]
+const MASKED_MAC: &str = "02:00:00:00:00:00";
 
 /// The local address the OS would use to reach the internet (1.1.1.1:80).
 /// Nothing is sent: connecting a UDP socket only selects a route.
