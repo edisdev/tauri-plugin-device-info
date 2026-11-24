@@ -24,7 +24,7 @@ export default defineConfig({
             { text: 'Platforms', link: '/platforms/' },
             { text: 'Examples', link: '/examples' },
             {
-                text: 'v1.3.1',
+                text: 'v1.3.2',
                 items: [
                     { text: 'Changelog', link: 'https://github.com/edisdev/tauri-plugin-device-info/blob/main/CHANGELOG.md' },
                     { text: 'npm', link: 'https://www.npmjs.com/package/tauri-plugin-device-info-api' },
