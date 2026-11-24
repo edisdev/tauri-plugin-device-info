@@ -178,6 +178,120 @@ fn providing_power_source() -> Option<String> {
     }
 }
 
+/// The placeholder macOS 27.2+ reports instead of a real link-layer address.
+const MASKED_MAC: &str = "02:00:00:00:00:00";
+
+/// Replaces the macOS 27.2+ placeholder with the address `hardware_mac`
+/// finds. A real address is returned as is, without calling `hardware_mac`;
+/// the placeholder stays when `hardware_mac` finds nothing.
+pub fn unmask_mac(mac: String, hardware_mac: impl FnOnce() -> Option<String>) -> String {
+    if mac == MASKED_MAC {
+        hardware_mac().unwrap_or(mac)
+    } else {
+        mac
+    }
+}
+
+/// The hardware MAC address of a BSD interface (`en0`, ...), read from the
+/// `IOMACAddress` property of its IOKit network controller.
+///
+/// macOS 27.2 masks link-layer addresses as `02:00:00:00:00:00` in
+/// getifaddrs, sysctl and ioctl for third-party processes; IOKit still
+/// reports the real address. `None` when the interface has no IOKit entry
+/// (`utun`, `bridge`, ...) or no MAC.
+pub fn hardware_mac_address(bsd_name: &str) -> Option<String> {
+    use std::ffi::{c_char, c_void, CString};
+
+    #[link(name = "IOKit", kind = "framework")]
+    extern "C" {
+        fn IOBSDNameMatching(main_port: u32, options: u32, bsd_name: *const c_char) -> *mut c_void;
+        fn IOServiceGetMatchingService(main_port: u32, matching: *mut c_void) -> u32;
+        fn IORegistryEntrySearchCFProperty(
+            entry: u32,
+            plane: *const c_char,
+            key: *const c_void,
+            allocator: *const c_void,
+            options: u32,
+        ) -> *const c_void;
+        fn IOObjectRelease(object: u32) -> i32;
+    }
+    #[link(name = "CoreFoundation", kind = "framework")]
+    extern "C" {
+        fn CFStringCreateWithCString(
+            allocator: *const c_void,
+            c_str: *const c_char,
+            encoding: u32,
+        ) -> *const c_void;
+        fn CFGetTypeID(cf: *const c_void) -> usize;
+        fn CFDataGetTypeID() -> usize;
+        fn CFDataGetLength(data: *const c_void) -> isize;
+        fn CFDataGetBytePtr(data: *const c_void) -> *const u8;
+        fn CFRelease(cf: *const c_void);
+    }
+    const CF_STRING_ENCODING_UTF8: u32 = 0x0800_0100;
+    const K_IO_MAIN_PORT_DEFAULT: u32 = 0;
+    // kIORegistryIterateRecursively | kIORegistryIterateParents: the MAC lives
+    // on the controller, a parent of the interface entry.
+    const SEARCH_PARENTS: u32 = 0x1 | 0x2;
+
+    let name = CString::new(bsd_name).ok()?;
+    // SAFETY: the matching dictionary is consumed by
+    // IOServiceGetMatchingService; the service, key and property follow the
+    // Create/Copy rule and are released below. The data bytes are copied out
+    // before the property is released.
+    unsafe {
+        let matching = IOBSDNameMatching(K_IO_MAIN_PORT_DEFAULT, 0, name.as_ptr());
+        if matching.is_null() {
+            return None;
+        }
+        let service = IOServiceGetMatchingService(K_IO_MAIN_PORT_DEFAULT, matching);
+        if service == 0 {
+            return None;
+        }
+        let key = CFStringCreateWithCString(
+            std::ptr::null(),
+            c"IOMACAddress".as_ptr(),
+            CF_STRING_ENCODING_UTF8,
+        );
+        let data = if key.is_null() {
+            std::ptr::null()
+        } else {
+            IORegistryEntrySearchCFProperty(
+                service,
+                c"IOService".as_ptr(),
+                key,
+                std::ptr::null(),
+                SEARCH_PARENTS,
+            )
+        };
+        let mac = (!data.is_null() && CFGetTypeID(data) == CFDataGetTypeID())
+            .then(|| {
+                std::slice::from_raw_parts(CFDataGetBytePtr(data), CFDataGetLength(data) as usize)
+                    .to_vec()
+            })
+            .and_then(|bytes| format_mac(&bytes));
+        if !data.is_null() {
+            CFRelease(data);
+        }
+        if !key.is_null() {
+            CFRelease(key);
+        }
+        IOObjectRelease(service);
+        mac
+    }
+}
+
+/// Formats a 6-byte MAC as `aa:bb:cc:dd:ee:ff`, the format `netdev` uses.
+fn format_mac(bytes: &[u8]) -> Option<String> {
+    (bytes.len() == 6).then(|| {
+        bytes
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<Vec<_>>()
+            .join(":")
+    })
+}
+
 /// Maps an IOKit providing-power-source type to "on external power".
 fn power_source_is_external(kind: &str) -> Option<bool> {
     match kind {
@@ -191,6 +305,50 @@ fn power_source_is_external(kind: &str) -> Option<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn masked_mac_is_replaced_by_the_hardware_address() {
+        assert_eq!(
+            unmask_mac(MASKED_MAC.to_string(), || Some("fc:b2:14:ac:e1:35".into())),
+            "fc:b2:14:ac:e1:35"
+        );
+    }
+
+    #[test]
+    fn masked_mac_stays_when_iokit_finds_nothing() {
+        assert_eq!(unmask_mac(MASKED_MAC.to_string(), || None), MASKED_MAC);
+    }
+
+    #[test]
+    fn real_mac_does_not_query_iokit() {
+        assert_eq!(
+            unmask_mac("2e:9f:c7:a0:ee:8b".to_string(), || {
+                panic!("IOKit must not be queried for a real address")
+            }),
+            "2e:9f:c7:a0:ee:8b"
+        );
+    }
+
+    /// Smoke test against the real IOKit registry. `lo0` has no hardware
+    /// address; `en0` may be missing on a CI VM, but if IOKit reports one it
+    /// must be a real address, not the placeholder.
+    #[test]
+    fn iokit_lookup_smoke_test() {
+        assert_eq!(hardware_mac_address("lo0"), None);
+        if let Some(mac) = hardware_mac_address("en0") {
+            assert_ne!(mac, MASKED_MAC);
+            assert_eq!(mac.len(), 17);
+        }
+    }
+
+    #[test]
+    fn mac_bytes_are_formatted_like_netdev() {
+        assert_eq!(
+            format_mac(&[0xfc, 0xb2, 0x14, 0x0a, 0xe1, 0x35]).as_deref(),
+            Some("fc:b2:14:0a:e1:35")
+        );
+        assert_eq!(format_mac(&[1, 2, 3]), None);
+    }
 
     #[test]
     fn power_source_type_maps_to_external_power() {
